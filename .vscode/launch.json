@@ -1,0 +1,23 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        
+    {
+
+        "name": "Flask",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/server.py",
+        "env": {
+            "FLASK_APP": "server.py",
+            "FLASK_ENV": "development"
+        },
+        "console": "integratedTerminal", // Show output in integrated terminal
+        "python": "${workspaceFolder}/venv/bin/python",
+        "envFile": "${workspaceFolder}/.env"
+    }
+    ]
+}

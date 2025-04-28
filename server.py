@@ -608,6 +608,83 @@ def extract_chats() -> list[Dict[str,Any]]:
     logger.debug(f"Total chat sessions extracted: {len(out)}")
     return out
 
+def extract_project_from_git_repos(workspace_id, debug=False):
+    """
+    Extract project name from the git repositories in a workspace.
+    Returns None if no repositories found or unable to access the DB.
+    """
+    if not workspace_id or workspace_id == "unknown" or workspace_id == "(unknown)" or workspace_id == "(global)":
+        if debug:
+            logger.debug(f"Invalid workspace ID: {workspace_id}")
+        return None
+        
+    # Find the workspace DB
+    cursor_base = cursor_root()
+    workspace_db_path = cursor_base / "User" / "workspaceStorage" / workspace_id / "state.vscdb"
+    
+    if not workspace_db_path.exists():
+        if debug:
+            logger.debug(f"Workspace DB not found for ID: {workspace_id}")
+        return None
+        
+    try:
+        # Connect to the workspace DB
+        if debug:
+            logger.debug(f"Connecting to workspace DB: {workspace_db_path}")
+        con = sqlite3.connect(f"file:{workspace_db_path}?mode=ro", uri=True)
+        cur = con.cursor()
+        
+        # Look for git repositories
+        git_data = j(cur, "ItemTable", "scm:view:visibleRepositories")
+        if not git_data or not isinstance(git_data, dict) or 'all' not in git_data:
+            if debug:
+                logger.debug(f"No git repositories found in workspace {workspace_id}, git_data: {git_data}")
+            con.close()
+            return None
+            
+        # Extract repo paths from the 'all' key
+        repos = git_data.get('all', [])
+        if not repos or not isinstance(repos, list):
+            if debug:
+                logger.debug(f"No repositories in 'all' key for workspace {workspace_id}, repos: {repos}")
+            con.close()
+            return None
+            
+        if debug:
+            logger.debug(f"Found {len(repos)} git repositories in workspace {workspace_id}: {repos}")
+            
+        # Process each repo path
+        for repo in repos:
+            if not isinstance(repo, str):
+                continue
+                
+            # Look for git:Git:file:/// pattern
+            if "git:Git:file:///" in repo:
+                # Extract the path part
+                path = repo.split("file:///")[-1]
+                path_parts = [p for p in path.split('/') if p]
+                
+                if path_parts:
+                    # Use the last part as the project name
+                    project_name = path_parts[-1]
+                    if debug:
+                        logger.debug(f"Found project name '{project_name}' from git repo in workspace {workspace_id}")
+                    con.close()
+                    return project_name
+            else:
+                if debug:
+                    logger.debug(f"No 'git:Git:file:///' pattern in repo: {repo}")
+                    
+        if debug:
+            logger.debug(f"No suitable git repos found in workspace {workspace_id}")
+        con.close()
+    except Exception as e:
+        if debug:
+            logger.debug(f"Error extracting git repos from workspace {workspace_id}: {e}")
+        return None
+        
+    return None
+
 def format_chat_for_frontend(chat):
     """Format the chat data to match what the frontend expects."""
     try:
@@ -676,6 +753,13 @@ def format_chat_for_frontend(chat):
                     project['rootPath'] = f"/workspace/{workspace_id}"
                 elif project.get('rootPath') == '/' or project.get('rootPath') == '/Users':
                     project['rootPath'] = f"{project['rootPath']}/workspace/{workspace_id}"
+        
+        # FALLBACK: If project name is still generic, try to extract it from git repositories
+        if project.get('name') in ['Home Directory', '(unknown)']:
+            git_project_name = extract_project_from_git_repos(workspace_id, debug=True)
+            if git_project_name:
+                logger.debug(f"Improved project name from '{project.get('name')}' to '{git_project_name}' using git repo")
+                project['name'] = git_project_name
         
         # Add workspace_id to the project data explicitly
         project['workspace_id'] = workspace_id
@@ -760,5 +844,10 @@ def serve_react(path):
     return send_from_directory(app.static_folder, 'index.html')
 
 if __name__ == '__main__':
-    logger.info("Starting server on port 5002")
-    app.run(debug=True, port=5002)
+    parser = argparse.ArgumentParser(description='Run the Cursor Chat View server')
+    parser.add_argument('--port', type=int, default=5000, help='Port to run the server on')
+    parser.add_argument('--debug', action='store_true', help='Run in debug mode')
+    args = parser.parse_args()
+    
+    logger.info(f"Starting server on port {args.port}")
+    app.run(debug=args.debug, port=args.port)

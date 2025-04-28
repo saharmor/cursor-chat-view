@@ -181,3 +181,4 @@ local_chats/*
 *.vscdb
 .cursor/rules/python-version.mdc
 frontend/node_modules/*
+cursor_chats.json

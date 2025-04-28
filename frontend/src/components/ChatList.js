@@ -49,13 +49,27 @@ const ChatList = () => {
     fetchChats();
   }, []);
 
-  // Group chats by project
+  // Group chats by project name
   const chatsByProject = chats.reduce((acc, chat) => {
+    // Use the project name as the grouping key
     const projectName = chat.project?.name || 'Unknown Project';
+    
+    // Create a new entry for this project if it doesn't exist
     if (!acc[projectName]) {
-      acc[projectName] = [];
+      acc[projectName] = {
+        name: projectName,
+        path: chat.project?.rootPath || 'Unknown',
+        chats: []
+      };
     }
-    acc[projectName].push(chat);
+    
+    // If this chat has a more specific path than what we have, update it
+    if (chat.project?.rootPath && 
+        acc[projectName].path === 'Unknown') {
+      acc[projectName].path = chat.project.rootPath;
+    }
+    
+    acc[projectName].chats.push(chat);
     return acc;
   }, {});
 
@@ -134,20 +148,26 @@ const ChatList = () => {
           </Button>
         </Paper>
       ) : (
-        Object.entries(chatsByProject).map(([projectName, projectChats]) => (
+        Object.entries(chatsByProject).map(([projectName, projectData]) => (
           <Box key={projectName} sx={{ mb: 4 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <FolderIcon sx={{ mr: 1 }} />
-              <Typography variant="h5">{projectName}</Typography>
-              <Chip 
-                label={`${projectChats.length} ${projectChats.length === 1 ? 'chat' : 'chats'}`} 
-                size="small" 
-                sx={{ ml: 2 }} 
-              />
-            </Box>
+            <Paper sx={{ p: 2, mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <FolderIcon sx={{ mr: 1 }} />
+                <Typography variant="h5">{projectData.name}</Typography>
+                <Chip 
+                  label={`${projectData.chats.length} ${projectData.chats.length === 1 ? 'chat' : 'chats'}`} 
+                  size="small" 
+                  sx={{ ml: 2 }} 
+                />
+              </Box>
+              
+              <Typography variant="body2" color="text.secondary">
+                Path: {projectData.path}
+              </Typography>
+            </Paper>
             
             <Grid container spacing={3}>
-              {projectChats.map((chat, index) => {
+              {projectData.chats.map((chat, index) => {
                 // Format the date safely
                 let dateDisplay = 'Unknown date';
                 try {
@@ -189,12 +209,28 @@ const ChatList = () => {
                         
                         <Divider sx={{ my: 1 }} />
                         
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                           <MessageIcon fontSize="small" sx={{ mr: 1 }} />
                           <Typography variant="body2">
                             {Array.isArray(chat.messages) ? chat.messages.length : 0} messages
                           </Typography>
                         </Box>
+                        
+                        {chat.db_path && (
+                          <Typography 
+                            variant="caption" 
+                            color="text.secondary"
+                            sx={{ 
+                              display: 'block',
+                              mb: 1,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            DB: {chat.db_path.split('/').slice(-2).join('/')}
+                          </Typography>
+                        )}
                         
                         {Array.isArray(chat.messages) && chat.messages[0] && chat.messages[0].content && (
                           <Typography 

@@ -109,8 +109,20 @@ const ChatDetail = () => {
         </Box>
         
         <Typography variant="body2" color="text.secondary" gutterBottom>
-          {chat.project?.rootPath || 'Unknown location'}
+          Path: {chat.project?.rootPath || 'Unknown location'}
         </Typography>
+        
+        {chat.workspace_id && (
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            Workspace ID: {chat.workspace_id}
+          </Typography>
+        )}
+        
+        {chat.db_path && (
+          <Typography variant="body2" color="text.secondary" gutterBottom sx={{ wordBreak: 'break-all' }}>
+            Database: {chat.db_path}
+          </Typography>
+        )}
       </Paper>
 
       <Typography variant="h5" gutterBottom>

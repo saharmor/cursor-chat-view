@@ -19,6 +19,8 @@ import {
   alpha,
   TextField,
   InputAdornment,
+  CardActions,
+  Tooltip,
 } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
@@ -27,9 +29,9 @@ import InfoIcon from '@mui/icons-material/Info';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import CodeIcon from '@mui/icons-material/Code';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import { colors } from '../App';
 
 const ChatList = () => {
@@ -143,6 +145,85 @@ const ChatList = () => {
         expandAll[projectName] = true;
       });
       setExpandedProjects(expandAll);
+    }
+  };
+
+  // Handle export
+  const handleExport = async (e, sessionId) => {
+    // Prevent navigation to chat detail
+    e.preventDefault();
+    e.stopPropagation();
+    
+    try {
+      console.log("Starting HTML export for session:", sessionId);
+      console.log(`Making API request to: /api/chat/${sessionId}/export`);
+      
+      const response = await axios({
+        method: 'GET',
+        url: `/api/chat/${sessionId}/export`,
+        responseType: 'text', 
+        headers: {
+          'Accept': 'text/html'
+        }
+      });
+      
+      const content = response.data;
+      console.log("Received content length:", content ? content.length : 0);
+      
+      if (!content || content.length === 0) {
+        throw new Error("Received empty or invalid content from server");
+      }
+      
+      // Create a Blob with explicit UTF-8 encoding type
+      const blob = new Blob([content], { type: 'text/html;charset=utf-8' });
+      console.log("Created blob, size:", blob.size);
+
+      // --- Download Logic Start ---
+      const filename = `cursor-chat-${sessionId.slice(0, 8)}.html`;
+      const link = document.createElement('a');
+      
+      // Create an object URL for the blob
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = filename;
+      
+      // Append link to the body (required for Firefox)
+      document.body.appendChild(link);
+      
+      // Programmatically click the link to trigger the download
+      link.click();
+      
+      // Clean up: remove the link and revoke the object URL
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      console.log("Download initiated and cleanup complete");
+      // --- Download Logic End ---
+      
+    } catch (error) {
+      // ADDED: More detailed error logging
+      console.error('Detailed export error:', error);
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.error('Error Response Data:', error.response.data);
+        console.error('Error Response Status:', error.response.status);
+        console.error('Error Response Headers:', error.response.headers);
+      } else if (error.request) {
+        // The request was made but no response was received
+        // `error.request` is an instance of XMLHttpRequest in the browser
+        console.error('Error Request:', error.request);
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        console.error('Error Message:', error.message);
+      }
+      console.error('Error Config:', error.config);
+      
+      const errorMessage = error.response ? 
+        `Server error: ${error.response.status}` : 
+        error.request ? 
+        'No response received from server' : 
+        error.message || 'Unknown error setting up request';
+      alert(`Failed to export chat: ${errorMessage}`);
     }
   };
 
@@ -393,7 +474,6 @@ const ChatList = () => {
                                   {dateDisplay}
                                 </Typography>
                               </Box>
-                              <CodeIcon fontSize="small" sx={{ color: alpha(colors.primary.main, 0.7) }} />
                             </Box>
                             
                             <Divider sx={{ my: 1.5 }} />
@@ -447,6 +527,17 @@ const ChatList = () => {
                               </Box>
                             )}
                           </CardContent>
+                          <CardActions sx={{ mt: 'auto', pt: 0 }}>
+                            <Tooltip title="Export as HTML">
+                              <IconButton 
+                                size="small" 
+                                onClick={(e) => handleExport(e, chat.session_id)}
+                                sx={{ ml: 'auto' }}
+                              >
+                                <FileDownloadIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </CardActions>
                         </Card>
                       </Grid>
                     );

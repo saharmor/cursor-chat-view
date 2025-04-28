@@ -13,6 +13,7 @@ import {
   Button,
   Avatar,
   alpha,
+  Stack,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import FolderIcon from '@mui/icons-material/Folder';
@@ -21,6 +22,8 @@ import PersonIcon from '@mui/icons-material/Person';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import StorageIcon from '@mui/icons-material/Storage';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import DataObjectIcon from '@mui/icons-material/DataObject';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import { colors } from '../App';
 
 const ChatDetail = () => {
@@ -43,6 +46,27 @@ const ChatDetail = () => {
 
     fetchChat();
   }, [sessionId]);
+
+  const handleExport = async () => {
+    try {
+      const { data: blob } = await axios.get(
+        `/api/chat/${sessionId}/export`,
+        { responseType: 'blob' }       // ← expect a Blob, not text
+      );
+  
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `cursor-chat-${sessionId.slice(0, 8)}.html`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export failed:', err);
+      alert('Failed to export chat – check console for details');
+    }
+  };
 
   if (loading) {
     return (
@@ -92,21 +116,33 @@ const ChatDetail = () => {
 
   return (
     <Container sx={{ mb: 6 }}>
-      <Button
-        component={Link}
-        to="/"
-        startIcon={<ArrowBackIcon />}
-        variant="outlined"
-        color="primary"
-        sx={{ mb: 3, mt: 2, borderRadius: 2 }}
-      >
-        Back to all chats
-      </Button>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, mt: 2 }}>
+        <Button
+          component={Link}
+          to="/"
+          startIcon={<ArrowBackIcon />}
+          variant="outlined"
+          color="primary"
+          sx={{ borderRadius: 2 }}
+        >
+          Back to all chats
+        </Button>
+        
+        <Button
+          onClick={handleExport}
+          startIcon={<FileDownloadIcon />}
+          variant="contained"
+          color="primary"
+          sx={{ borderRadius: 2 }}
+        >
+          Export as HTML
+        </Button>
+      </Box>
 
       <Paper 
         sx={{ 
           p: 0, 
-          mb: 4, 
+          mb: 3, 
           overflow: 'hidden',
           boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
         }}
@@ -114,11 +150,12 @@ const ChatDetail = () => {
         <Box sx={{ 
           background: `linear-gradient(90deg, ${colors.primary.main} 0%, ${colors.primary.light} 100%)`,
           color: 'white',
-          p: 2.5,
+          px: 3,
+          py: 1.5,
         }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
-            <FolderIcon sx={{ mr: 1.5, fontSize: 28 }} />
-            <Typography variant="h5" fontWeight="600" sx={{ mr: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+            <FolderIcon sx={{ mr: 1, fontSize: 22 }} />
+            <Typography variant="h6" fontWeight="600" sx={{ mr: 1.5 }}>
               {projectName}
             </Typography>
             <Chip
@@ -136,15 +173,15 @@ const ChatDetail = () => {
           </Box>
         </Box>
         
-        <Box sx={{ p: 2.5 }}>
+        <Box sx={{ px: 3, py: 1.5 }}>
           <Box sx={{ 
             display: 'flex', 
             flexWrap: 'wrap', 
-            gap: 3,
-            mb: 1
+            gap: 2,
+            alignItems: 'center'
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <AccountTreeIcon sx={{ mr: 1, color: 'primary.main', opacity: 0.8 }} />
+              <AccountTreeIcon sx={{ mr: 0.5, color: 'primary.main', opacity: 0.8, fontSize: 18 }} />
               <Typography variant="body2" color="text.secondary">
                 <strong>Path:</strong> {chat.project?.rootPath || 'Unknown location'}
               </Typography>
@@ -152,21 +189,22 @@ const ChatDetail = () => {
             
             {chat.workspace_id && (
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <StorageIcon sx={{ mr: 1, color: 'secondary.main', opacity: 0.8 }} />
+                <StorageIcon sx={{ mr: 0.5, color: 'secondary.main', opacity: 0.8, fontSize: 18 }} />
                 <Typography variant="body2" color="text.secondary">
                   <strong>Workspace:</strong> {chat.workspace_id}
                 </Typography>
               </Box>
             )}
+            
+            {chat.db_path && (
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <DataObjectIcon sx={{ mr: 0.5, color: 'info.main', opacity: 0.8, fontSize: 18 }} />
+                <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
+                  <strong>DB:</strong> {chat.db_path.split('/').pop()}
+                </Typography>
+              </Box>
+            )}
           </Box>
-          
-          {chat.db_path && (
-            <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: alpha('#000', 0.06) }}>
-              <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
-                <strong>Database:</strong> {chat.db_path}
-              </Typography>
-            </Box>
-          )}
         </Box>
       </Paper>
 

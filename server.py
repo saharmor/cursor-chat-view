@@ -15,7 +15,7 @@ import pathlib
 from collections import defaultdict
 from typing import Dict, Any, Iterable
 from pathlib import Path
-from flask import Flask, jsonify, send_from_directory, request
+from flask import Flask, Response, jsonify, send_from_directory, request
 from flask_cors import CORS
 
 # Configure logging
@@ -834,6 +834,168 @@ def get_chat(session_id):
     except Exception as e:
         logger.error(f"Error in get_chat: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/chat/<session_id>/export', methods=['GET'])
+def export_chat(session_id):
+    """Export a specific chat session as standalone HTML (TEMP: text/plain)."""
+    logger.critical(f"!!!!!!!! EXPORT_CHAT ENDPOINT HIT for session: {session_id} !!!!!!!!")
+    try:
+        logger.info(f"Received request to export chat {session_id} from {request.remote_addr}")
+        chats = extract_chats()
+        
+        for chat in chats:
+            # Check for a matching composerId safely
+            if 'session' in chat and chat['session'] and isinstance(chat['session'], dict):
+                if chat['session'].get('composerId') == session_id:
+                    formatted_chat = format_chat_for_frontend(chat)
+                    
+                    html_content = generate_standalone_html(formatted_chat)
+                    return Response(
+                        html_content,
+                        mimetype="text/html; charset=utf-8",
+                        headers={
+                            "Content-Disposition": f'attachment; filename="cursor-chat-{session_id[:8]}.html"',
+                            "Content-Length": str(len(html_content)),
+                            "Cache-Control": "no-store",
+                        },
+                    )
+        
+        logger.warning(f"Chat with ID {session_id} not found for export")
+        return jsonify({"error": "Chat not found"}), 404
+    except Exception as e:
+        logger.error(f"Error in export_chat: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+def generate_standalone_html(chat):
+    """Generate a standalone HTML representation of the chat."""
+    logger.info(f"Generating HTML for session ID: {chat.get('session_id', 'N/A')}")
+    try:
+        # Format date for display
+        date_display = "Unknown date"
+        if chat.get('date'):
+            try:
+                date_obj = datetime.datetime.fromtimestamp(chat['date'])
+                date_display = date_obj.strftime("%Y-%m-%d %H:%M:%S")
+            except Exception as e:
+                logger.warning(f"Error formatting date: {e}")
+        
+        # Get project info
+        project_name = chat.get('project', {}).get('name', 'Unknown Project')
+        project_path = chat.get('project', {}).get('rootPath', 'Unknown Path')
+        logger.info(f"Project: {project_name}, Path: {project_path}, Date: {date_display}")
+        
+        # Build the HTML content
+        messages_html = ""
+        messages = chat.get('messages', [])
+        logger.info(f"Found {len(messages)} messages for the chat.")
+        
+        if not messages:
+            logger.warning("No messages found in the chat object to generate HTML.")
+            messages_html = "<p>No messages found in this conversation.</p>"
+        else:
+            for i, msg in enumerate(messages):
+                role = msg.get('role', 'unknown')
+                content = msg.get('content', '')
+                logger.debug(f"Processing message {i+1}/{len(messages)} - Role: {role}, Content length: {len(content)}")
+                
+                if not content or not isinstance(content, str):
+                    logger.warning(f"Message {i+1} has invalid content: {content}")
+                    content = "Content unavailable"
+                
+                # Simple HTML escaping
+                escaped_content = content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                
+                # Convert markdown code blocks (handle potential nesting issues simply)
+                processed_content = ""
+                in_code_block = False
+                for line in escaped_content.split('\n'):
+                    if line.strip().startswith("```"):
+                        if not in_code_block:
+                            processed_content += "<pre><code>"
+                            in_code_block = True
+                            # Remove the first ``` marker
+                            line = line.strip()[3:] 
+                        else:
+                            processed_content += "</code></pre>\n"
+                            in_code_block = False
+                            line = "" # Skip the closing ``` line
+                    
+                    if in_code_block:
+                         # Inside code block, preserve spacing and add line breaks
+                        processed_content += line + "\n" 
+                    else:
+                        # Outside code block, use <br> for newlines
+                        processed_content += line + "<br>"
+                
+                # Close any unclosed code block at the end
+                if in_code_block:
+                    processed_content += "</code></pre>"
+                
+                avatar = "👤" if role == "user" else "🤖"
+                name = "You" if role == "user" else "Cursor Assistant"
+                bg_color = "#f0f7ff" if role == "user" else "#f0fff7"
+                border_color = "#3f51b5" if role == "user" else "#00796b"
+                
+                messages_html += f"""
+                <div class="message" style="margin-bottom: 20px;">
+                    <div class="message-header" style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <div class="avatar" style="width: 32px; height: 32px; border-radius: 50%; background-color: {border_color}; color: white; display: flex; justify-content: center; align-items: center; margin-right: 10px;">
+                            {avatar}
+                        </div>
+                        <div class="sender" style="font-weight: bold;">{name}</div>
+                    </div>
+                    <div class="message-content" style="padding: 15px; border-radius: 8px; background-color: {bg_color}; border-left: 4px solid {border_color}; margin-left: {0 if role == 'user' else '40px'}; margin-right: {0 if role == 'assistant' else '40px'};">
+                        {processed_content} 
+                    </div>
+                </div>
+                """
+
+        # Create the complete HTML document
+        html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cursor Chat - {project_name}</title>
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 20px auto; padding: 20px; border: 1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }}
+        h1, h2, h3 {{ color: #2c3e50; }}
+        .header {{ background: linear-gradient(90deg, #3f51b5 0%, #5c6bc0 100%); color: white; padding: 15px 20px; border-radius: 8px 8px 0 0; margin: -20px -20px 20px -20px; }}
+        .chat-info {{ display: flex; flex-wrap: wrap; gap: 10px 20px; margin-bottom: 20px; background-color: #f9f9f9; padding: 12px 15px; border-radius: 8px; font-size: 0.9em; }}
+        .info-item {{ display: flex; align-items: center; }}
+        .info-label {{ font-weight: bold; margin-right: 5px; color: #555; }}
+        pre {{ background-color: #eef; padding: 15px; border-radius: 5px; overflow-x: auto; border: 1px solid #ddd; font-family: 'Courier New', Courier, monospace; font-size: 0.9em; white-space: pre-wrap; word-wrap: break-word; }}
+        code {{ background-color: transparent; padding: 0; border-radius: 0; font-family: inherit; }}
+        .message-content pre code {{ background-color: transparent; }}
+        .message-content {{ word-wrap: break-word; overflow-wrap: break-word; }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Cursor Chat: {project_name}</h1>
+    </div>
+    <div class="chat-info">
+        <div class="info-item"><span class="info-label">Project:</span> <span>{project_name}</span></div>
+        <div class="info-item"><span class="info-label">Path:</span> <span>{project_path}</span></div>
+        <div class="info-item"><span class="info-label">Date:</span> <span>{date_display}</span></div>
+        <div class="info-item"><span class="info-label">Session ID:</span> <span>{chat.get('session_id', 'Unknown')}</span></div>
+    </div>
+    <h2>Conversation History</h2>
+    <div class="messages">
+{messages_html}
+    </div>
+    <div style="margin-top: 30px; font-size: 12px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 15px;">
+        Exported from Cursor Chat Viewer
+    </div>
+</body>
+</html>"""
+        
+        logger.info(f"Finished generating HTML. Total length: {len(html)}")
+        return html
+    except Exception as e:
+        logger.error(f"Error generating HTML for session {chat.get('session_id', 'N/A')}: {e}", exc_info=True)
+        # Return an HTML formatted error message
+        return f"<html><body><h1>Error generating chat export</h1><p>Error: {e}</p></body></html>"
 
 # Serve React app
 @app.route('/', defaults={'path': ''})

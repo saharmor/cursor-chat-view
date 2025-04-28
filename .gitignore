@@ -177,3 +177,7 @@ extracted_chat_history.json
 
 __pycache__/*
 local_chats/*
+*.sqlite
+*.vscdb
+.cursor/rules/python-version.mdc
+frontend/node_modules/*

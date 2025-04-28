@@ -24,7 +24,7 @@ const Header = () => {
           
           <Button 
             component="a"
-            href="https://github.com/cursor-ai/cursor"
+            href="https://github.com/saharmor/cursor-chat-view"
             target="_blank"
             rel="noopener noreferrer"
             startIcon={<GitHubIcon />}

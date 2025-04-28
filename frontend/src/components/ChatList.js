@@ -17,6 +17,8 @@ import {
   Collapse,
   IconButton,
   alpha,
+  TextField,
+  InputAdornment,
 } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
@@ -26,6 +28,8 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import CodeIcon from '@mui/icons-material/Code';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 import { colors } from '../App';
 
 const ChatList = () => {
@@ -34,6 +38,7 @@ const ChatList = () => {
   const [error, setError] = useState(null);
   const [isDemo, setIsDemo] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchChats = async () => {
     setLoading(true);
@@ -64,29 +69,82 @@ const ChatList = () => {
     }));
   };
 
-  // Group chats by project name
-  const chatsByProject = chats.reduce((acc, chat) => {
-    // Use the project name as the grouping key
-    const projectName = chat.project?.name || 'Unknown Project';
-    
-    // Create a new entry for this project if it doesn't exist
-    if (!acc[projectName]) {
-      acc[projectName] = {
-        name: projectName,
-        path: chat.project?.rootPath || 'Unknown',
-        chats: []
-      };
+  // Filter chats based on search query
+  const filteredChatsByProject = () => {
+    if (!searchQuery.trim()) {
+      return chats.reduce((acc, chat) => {
+        const projectName = chat.project?.name || 'Unknown Project';
+        
+        if (!acc[projectName]) {
+          acc[projectName] = {
+            name: projectName,
+            path: chat.project?.rootPath || 'Unknown',
+            chats: []
+          };
+        }
+        
+        if (chat.project?.rootPath && 
+            acc[projectName].path === 'Unknown') {
+          acc[projectName].path = chat.project.rootPath;
+        }
+        
+        acc[projectName].chats.push(chat);
+        return acc;
+      }, {});
     }
+
+    const query = searchQuery.toLowerCase();
+    return chats.reduce((acc, chat) => {
+      const projectName = chat.project?.name || 'Unknown Project';
+      
+      // Check if project name matches
+      const projectMatches = projectName.toLowerCase().includes(query);
+      
+      // Check if any message content matches
+      const contentMatches = Array.isArray(chat.messages) && chat.messages.some(msg => 
+        typeof msg.content === 'string' && msg.content.toLowerCase().includes(query)
+      );
+      
+      if (projectMatches || contentMatches) {
+        if (!acc[projectName]) {
+          acc[projectName] = {
+            name: projectName,
+            path: chat.project?.rootPath || 'Unknown',
+            chats: []
+          };
+        }
+        
+        if (chat.project?.rootPath && 
+            acc[projectName].path === 'Unknown') {
+          acc[projectName].path = chat.project.rootPath;
+        }
+        
+        acc[projectName].chats.push(chat);
+      }
+      
+      return acc;
+    }, {});
+  };
+
+  // Clear search query
+  const clearSearch = () => {
+    setSearchQuery('');
+  };
+
+  // Handle search input change
+  const handleSearchChange = (event) => {
+    setSearchQuery(event.target.value);
     
-    // If this chat has a more specific path than what we have, update it
-    if (chat.project?.rootPath && 
-        acc[projectName].path === 'Unknown') {
-      acc[projectName].path = chat.project.rootPath;
+    // Auto-expand all projects when searching
+    if (event.target.value.trim()) {
+      const expandAll = {};
+      chats.forEach(chat => {
+        const projectName = chat.project?.name || 'Unknown Project';
+        expandAll[projectName] = true;
+      });
+      setExpandedProjects(expandAll);
     }
-    
-    acc[projectName].chats.push(chat);
-    return acc;
-  }, {});
+  };
 
   if (loading) {
     return (
@@ -106,11 +164,45 @@ const ChatList = () => {
     );
   }
 
+  const chatsByProject = filteredChatsByProject();
+
   return (
     <Container>
       <Typography variant="h4" gutterBottom sx={{ mt: 3, fontWeight: 700 }}>
         Your Cursor Chat History
       </Typography>
+      
+      {/* Search Bar */}
+      <Paper sx={{ p: 1.5, mb: 3, display: 'flex', alignItems: 'center' }}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Search by project name or chat content..."
+          value={searchQuery}
+          onChange={handleSearchChange}
+          size="medium"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon color="action" />
+              </InputAdornment>
+            ),
+            endAdornment: searchQuery && (
+              <InputAdornment position="end">
+                <IconButton
+                  size="small"
+                  aria-label="clear search"
+                  onClick={clearSearch}
+                  edge="end"
+                >
+                  <ClearIcon />
+                </IconButton>
+              </InputAdornment>
+            ),
+            sx: { borderRadius: 2 }
+          }}
+        />
+      </Paper>
       
       {isDemo && (
         <Alert severity="info" sx={{ mb: 3, borderRadius: 3 }}>
@@ -148,28 +240,45 @@ const ChatList = () => {
         >
           <InfoIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
           <Typography variant="h5" gutterBottom fontWeight="600">
-            No Chat History Found
+            {searchQuery ? 'No Results Found' : 'No Chat History Found'}
           </Typography>
           <Typography variant="body1" sx={{ mb: 2 }}>
-            We couldn't find any Cursor chat history on your system. This could be because:
+            {searchQuery 
+              ? `We couldn't find any chats matching "${searchQuery}".`
+              : "We couldn't find any Cursor chat history on your system. This could be because:"}
           </Typography>
-          <Box sx={{ textAlign: 'left', maxWidth: '600px', mx: 'auto' }}>
-            <Typography component="ul" variant="body2" sx={{ mb: 2 }}>
-              <li>You haven't used Cursor's AI Assistant yet</li>
-              <li>Your Cursor databases are stored in a non-standard location</li>
-              <li>There might be permission issues accessing the database files</li>
-            </Typography>
-          </Box>
-          <Button 
-            startIcon={<RefreshIcon />}
-            onClick={fetchChats}
-            variant="contained"
-            color="primary"
-            size="large"
-            sx={{ borderRadius: 2 }}
-          >
-            Retry Detection
-          </Button>
+          {!searchQuery && (
+            <Box sx={{ textAlign: 'left', maxWidth: '600px', mx: 'auto' }}>
+              <Typography component="ul" variant="body2" sx={{ mb: 2 }}>
+                <li>You haven't used Cursor's AI Assistant yet</li>
+                <li>Your Cursor databases are stored in a non-standard location</li>
+                <li>There might be permission issues accessing the database files</li>
+              </Typography>
+            </Box>
+          )}
+          {searchQuery ? (
+            <Button 
+              startIcon={<ClearIcon />}
+              onClick={clearSearch}
+              variant="contained"
+              color="primary"
+              size="large"
+              sx={{ borderRadius: 2 }}
+            >
+              Clear Search
+            </Button>
+          ) : (
+            <Button 
+              startIcon={<RefreshIcon />}
+              onClick={fetchChats}
+              variant="contained"
+              color="primary"
+              size="large"
+              sx={{ borderRadius: 2 }}
+            >
+              Retry Detection
+            </Button>
+          )}
         </Paper>
       ) : (
         Object.entries(chatsByProject).map(([projectName, projectData]) => {

@@ -14,18 +14,26 @@ import {
   Paper,
   Alert,
   Button,
+  Collapse,
+  IconButton,
+  alpha,
 } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import MessageIcon from '@mui/icons-material/Message';
 import InfoIcon from '@mui/icons-material/Info';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import CodeIcon from '@mui/icons-material/Code';
+import { colors } from '../App';
 
 const ChatList = () => {
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isDemo, setIsDemo] = useState(false);
+  const [expandedProjects, setExpandedProjects] = useState({});
 
   const fetchChats = async () => {
     setLoading(true);
@@ -48,6 +56,13 @@ const ChatList = () => {
   useEffect(() => {
     fetchChats();
   }, []);
+
+  const toggleProjectExpand = (projectName) => {
+    setExpandedProjects(prev => ({
+      ...prev,
+      [projectName]: !prev[projectName]
+    }));
+  };
 
   // Group chats by project name
   const chatsByProject = chats.reduce((acc, chat) => {
@@ -93,12 +108,12 @@ const ChatList = () => {
 
   return (
     <Container>
-      <Typography variant="h4" gutterBottom>
+      <Typography variant="h4" gutterBottom sx={{ mt: 3, fontWeight: 700 }}>
         Your Cursor Chat History
       </Typography>
       
       {isDemo && (
-        <Alert severity="info" sx={{ mb: 3 }}>
+        <Alert severity="info" sx={{ mb: 3, borderRadius: 3 }}>
           <Typography variant="body1" sx={{ mb: 1 }}>
             Currently showing demo data. No actual Cursor chat history was found on your system.
           </Typography>
@@ -123,9 +138,16 @@ const ChatList = () => {
       )}
       
       {Object.keys(chatsByProject).length === 0 ? (
-        <Paper sx={{ p: 3, textAlign: 'center' }}>
-          <InfoIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
-          <Typography variant="h6" gutterBottom>
+        <Paper 
+          sx={{ 
+            p: 4, 
+            textAlign: 'center', 
+            borderRadius: 4,
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+          }}
+        >
+          <InfoIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
+          <Typography variant="h5" gutterBottom fontWeight="600">
             No Chat History Found
           </Typography>
           <Typography variant="body1" sx={{ mb: 2 }}>
@@ -143,121 +165,188 @@ const ChatList = () => {
             onClick={fetchChats}
             variant="contained"
             color="primary"
+            size="large"
+            sx={{ borderRadius: 2 }}
           >
             Retry Detection
           </Button>
         </Paper>
       ) : (
-        Object.entries(chatsByProject).map(([projectName, projectData]) => (
-          <Box key={projectName} sx={{ mb: 4 }}>
-            <Paper sx={{ p: 2, mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <FolderIcon sx={{ mr: 1 }} />
-                <Typography variant="h5">{projectData.name}</Typography>
-                <Chip 
-                  label={`${projectData.chats.length} ${projectData.chats.length === 1 ? 'chat' : 'chats'}`} 
-                  size="small" 
-                  sx={{ ml: 2 }} 
-                />
-              </Box>
-              
-              <Typography variant="body2" color="text.secondary">
-                Path: {projectData.path}
-              </Typography>
-            </Paper>
-            
-            <Grid container spacing={3}>
-              {projectData.chats.map((chat, index) => {
-                // Format the date safely
-                let dateDisplay = 'Unknown date';
-                try {
-                  if (chat.date) {
-                    const dateObj = new Date(chat.date * 1000);
-                    // Check if date is valid
-                    if (!isNaN(dateObj.getTime())) {
-                      dateDisplay = dateObj.toLocaleString();
-                    }
+        Object.entries(chatsByProject).map(([projectName, projectData]) => {
+          return (
+            <Box key={projectName} sx={{ mb: 4 }}>
+              <Paper 
+                sx={{ 
+                  p: 0, 
+                  mb: 2, 
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                  transition: 'all 0.3s ease-in-out',
+                  '&:hover': {
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
                   }
-                } catch (err) {
-                  console.error('Error formatting date:', err);
-                }
-
-                return (
-                  <Grid item xs={12} sm={6} md={4} key={chat.session_id || `chat-${index}`}>
-                    <Card 
-                      component={Link} 
-                      to={`/chat/${chat.session_id}`}
+                }}
+              >
+                <Box 
+                  sx={{ 
+                    background: `linear-gradient(90deg, ${colors.primary.main} 0%, ${colors.primary.light} 100%)`,
+                    color: 'white',
+                    p: 2
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <FolderIcon sx={{ mr: 1.5, fontSize: 28 }} />
+                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        {projectData.name}
+                      </Typography>
+                      <Chip 
+                        label={`${projectData.chats.length} ${projectData.chats.length === 1 ? 'chat' : 'chats'}`} 
+                        size="small" 
+                        sx={{ 
+                          ml: 2,
+                          fontWeight: 500,
+                          backgroundColor: 'rgba(255,255,255,0.25)',
+                          color: 'white',
+                          '& .MuiChip-label': {
+                            px: 1.5
+                          }
+                        }} 
+                      />
+                    </Box>
+                    <IconButton 
+                      onClick={() => toggleProjectExpand(projectName)}
+                      aria-expanded={expandedProjects[projectName]}
+                      aria-label="show more"
                       sx={{ 
-                        height: '100%', 
-                        display: 'flex', 
-                        flexDirection: 'column',
-                        transition: 'transform 0.2s, box-shadow 0.2s',
-                        textDecoration: 'none',
+                        color: 'white',
+                        bgcolor: 'rgba(255,255,255,0.15)',
                         '&:hover': {
-                          transform: 'translateY(-4px)',
-                          boxShadow: '0 10px 20px rgba(0,0,0,0.2)',
+                          bgcolor: 'rgba(255,255,255,0.25)'
                         }
                       }}
                     >
-                      <CardContent>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <CalendarTodayIcon fontSize="small" sx={{ mr: 1 }} />
-                          <Typography variant="body2" color="text.secondary">
-                            {dateDisplay}
-                          </Typography>
-                        </Box>
-                        
-                        <Divider sx={{ my: 1 }} />
-                        
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <MessageIcon fontSize="small" sx={{ mr: 1 }} />
-                          <Typography variant="body2">
-                            {Array.isArray(chat.messages) ? chat.messages.length : 0} messages
-                          </Typography>
-                        </Box>
-                        
-                        {chat.db_path && (
-                          <Typography 
-                            variant="caption" 
-                            color="text.secondary"
-                            sx={{ 
-                              display: 'block',
-                              mb: 1,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap'
-                            }}
-                          >
-                            DB: {chat.db_path.split('/').slice(-2).join('/')}
-                          </Typography>
-                        )}
-                        
-                        {Array.isArray(chat.messages) && chat.messages[0] && chat.messages[0].content && (
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              mt: 2, 
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              color: 'text.secondary'
-                            }}
-                          >
-                            {typeof chat.messages[0].content === 'string' 
-                              ? chat.messages[0].content.substring(0, 100) + (chat.messages[0].content.length > 100 ? '...' : '')
-                              : 'Content unavailable'}
-                          </Typography>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                );
-              })}
-            </Grid>
-          </Box>
-        ))
+                      {expandedProjects[projectName] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                    </IconButton>
+                  </Box>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)', mt: 0.5 }}>
+                    {projectData.path}
+                  </Typography>
+                </Box>
+              </Paper>
+              
+              <Collapse in={expandedProjects[projectName] || false}>
+                <Grid container spacing={3}>
+                  {projectData.chats.map((chat, index) => {
+                    // Format the date safely
+                    let dateDisplay = 'Unknown date';
+                    try {
+                      if (chat.date) {
+                        const dateObj = new Date(chat.date * 1000);
+                        // Check if date is valid
+                        if (!isNaN(dateObj.getTime())) {
+                          dateDisplay = dateObj.toLocaleString();
+                        }
+                      }
+                    } catch (err) {
+                      console.error('Error formatting date:', err);
+                    }
+
+                    return (
+                      <Grid item xs={12} sm={6} md={4} key={chat.session_id || `chat-${index}`}>
+                        <Card 
+                          component={Link} 
+                          to={`/chat/${chat.session_id}`}
+                          sx={{ 
+                            height: '100%', 
+                            display: 'flex', 
+                            flexDirection: 'column',
+                            transition: 'all 0.3s cubic-bezier(.17,.67,.83,.67)',
+                            textDecoration: 'none',
+                            borderTop: '4px solid',
+                            borderColor: 'primary.main',
+                            '&:hover': {
+                              transform: 'translateY(-8px)',
+                              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
+                            }
+                          }}
+                        >
+                          <CardContent>
+                            <Box sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              mb: 1.5,
+                              justifyContent: 'space-between'
+                            }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <CalendarTodayIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                                <Typography variant="body2" color="text.secondary">
+                                  {dateDisplay}
+                                </Typography>
+                              </Box>
+                              <CodeIcon fontSize="small" sx={{ color: alpha(colors.primary.main, 0.7) }} />
+                            </Box>
+                            
+                            <Divider sx={{ my: 1.5 }} />
+                            
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                              <MessageIcon fontSize="small" sx={{ mr: 1, color: 'primary.main' }} />
+                              <Typography variant="body2" fontWeight="500">
+                                {Array.isArray(chat.messages) ? chat.messages.length : 0} messages
+                              </Typography>
+                            </Box>
+                            
+                            {chat.db_path && (
+                              <Typography 
+                                variant="caption" 
+                                color="text.secondary"
+                                sx={{ 
+                                  display: 'block',
+                                  mb: 1.5,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                DB: {chat.db_path.split('/').slice(-2).join('/')}
+                              </Typography>
+                            )}
+                            
+                            {Array.isArray(chat.messages) && chat.messages[0] && chat.messages[0].content && (
+                              <Box sx={{ 
+                                mt: 2, 
+                                p: 1.5, 
+                                backgroundColor: alpha(colors.primary.main, 0.05),
+                                borderRadius: 2
+                              }}>
+                                <Typography 
+                                  variant="body2" 
+                                  sx={{ 
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                    color: 'text.primary',
+                                    fontWeight: 400
+                                  }}
+                                >
+                                  {typeof chat.messages[0].content === 'string' 
+                                    ? chat.messages[0].content.substring(0, 100) + (chat.messages[0].content.length > 100 ? '...' : '')
+                                    : 'Content unavailable'}
+                                </Typography>
+                              </Box>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              </Collapse>
+            </Box>
+          );
+        })
       )}
     </Container>
   );

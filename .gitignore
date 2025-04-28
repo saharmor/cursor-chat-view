@@ -172,3 +172,8 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+extracted_chat_history.json
+.DS_Store
+
+__pycache__/*
+local_chats/*

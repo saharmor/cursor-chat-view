@@ -21,6 +21,13 @@ import {
   InputAdornment,
   CardActions,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControlLabel,
+  Checkbox,
+  DialogContentText,
 } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
@@ -32,6 +39,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import WarningIcon from '@mui/icons-material/Warning';
 import { colors } from '../App';
 
 const ChatList = () => {
@@ -41,6 +49,9 @@ const ChatList = () => {
   const [isDemo, setIsDemo] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [dontShowExportWarning, setDontShowExportWarning] = useState(false);
+  const [currentExportSession, setCurrentExportSession] = useState(null);
 
   const fetchChats = async () => {
     setLoading(true);
@@ -62,6 +73,15 @@ const ChatList = () => {
 
   useEffect(() => {
     fetchChats();
+    
+    // Check if user has previously chosen to not show the export warning
+    const warningPreference = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('dontShowExportWarning='));
+    
+    if (warningPreference) {
+      setDontShowExportWarning(warningPreference.split('=')[1] === 'true');
+    }
   }, []);
 
   const toggleProjectExpand = (projectName) => {
@@ -148,12 +168,43 @@ const ChatList = () => {
     }
   };
 
-  // Handle export
-  const handleExport = async (e, sessionId) => {
+  // Handle export warning confirmation
+  const handleExportWarningClose = (confirmed) => {
+    setExportModalOpen(false);
+    
+    // Save preference in cookies if "Don't show again" is checked
+    if (dontShowExportWarning) {
+      const expiryDate = new Date();
+      expiryDate.setFullYear(expiryDate.getFullYear() + 1); // Cookie lasts 1 year
+      document.cookie = `dontShowExportWarning=true; expires=${expiryDate.toUTCString()}; path=/`;
+    }
+    
+    // If confirmed, proceed with export
+    if (confirmed && currentExportSession) {
+      proceedWithExport(currentExportSession);
+    }
+    
+    // Reset current export session
+    setCurrentExportSession(null);
+  };
+
+  // Function to initiate export process
+  const handleExport = (e, sessionId) => {
     // Prevent navigation to chat detail
     e.preventDefault();
     e.stopPropagation();
     
+    // Check if warning should be shown
+    if (dontShowExportWarning) {
+      proceedWithExport(sessionId);
+    } else {
+      setCurrentExportSession(sessionId);
+      setExportModalOpen(true);
+    }
+  };
+
+  // Function to actually perform the export
+  const proceedWithExport = async (sessionId) => {
     try {
       console.log("Starting HTML export for session:", sessionId);
       console.log(`Making API request to: /api/chat/${sessionId}/export`);
@@ -249,9 +300,40 @@ const ChatList = () => {
 
   return (
     <Container>
-      <Typography variant="h4" gutterBottom sx={{ mt: 3, fontWeight: 700 }}>
-        Your Cursor Chat History
-      </Typography>
+      {/* Export Warning Modal */}
+      <Dialog
+        open={exportModalOpen}
+        onClose={() => handleExportWarningClose(false)}
+        aria-labelledby="export-warning-dialog-title"
+      >
+        <DialogTitle id="export-warning-dialog-title" sx={{ display: 'flex', alignItems: 'center' }}>
+          <WarningIcon sx={{ color: 'warning.main', mr: 1 }} />
+          Export Warning
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Please make sure your exported chat doesn't include sensitive data such as API keys and customer information.
+          </DialogContentText>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={dontShowExportWarning}
+                onChange={(e) => setDontShowExportWarning(e.target.checked)}
+              />
+            }
+            label="Don't show this warning again"
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => handleExportWarningClose(false)} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={() => handleExportWarningClose(true)} color="primary" variant="contained">
+            Continue Export
+          </Button>
+        </DialogActions>
+      </Dialog>
       
       {/* Search Bar */}
       <TextField
@@ -287,7 +369,7 @@ const ChatList = () => {
       {isDemo && (
         <Alert severity="info" sx={{ mb: 3, borderRadius: 3 }}>
           <Typography variant="body1" sx={{ mb: 1 }}>
-            Currently showing demo data. No actual Cursor chat history was found on your system.
+            Currently showing demo data. No actual Cursor View data was found on your system.
           </Typography>
           <Typography variant="body2">
             Cursor chat databases are typically stored in:
@@ -325,7 +407,7 @@ const ChatList = () => {
           <Typography variant="body1" sx={{ mb: 2 }}>
             {searchQuery 
               ? `We couldn't find any chats matching "${searchQuery}".`
-              : "We couldn't find any Cursor chat history on your system. This could be because:"}
+              : "We couldn't find any Cursor chat data on your system. This could be because:"}
           </Typography>
           {!searchQuery && (
             <Box sx={{ textAlign: 'left', maxWidth: '600px', mx: 'auto' }}>

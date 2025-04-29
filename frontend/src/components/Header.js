@@ -14,11 +14,14 @@ const Header = () => {
             alignItems: 'center', 
             textDecoration: 'none', 
             color: 'inherit',
-            flexGrow: 1
+            flexGrow: 1,
+            '&:hover': {
+              textDecoration: 'none'
+            }
           }}>
             <ChatIcon sx={{ mr: 1.5, fontSize: 28 }} />
             <Typography variant="h5" component="div" fontWeight="700">
-              Cursor Chat History
+              Cursor View
             </Typography>
           </Box>
           

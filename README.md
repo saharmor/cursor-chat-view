@@ -1,10 +1,10 @@
-# Cursor Chat History Viewer
+# Cursor View
 
 A web-based application to view and browse your Cursor AI chat history.
 
 ## Features
 
-- Automatically discovers and extracts Cursor chat history from your system
+- Automatically discovers and extracts Cursor chat data from your system
 - Groups conversations by project
 - Shows dates and message counts for each chat
 - Renders chat conversations with proper formatting

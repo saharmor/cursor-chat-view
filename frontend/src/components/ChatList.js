@@ -254,36 +254,35 @@ const ChatList = () => {
       </Typography>
       
       {/* Search Bar */}
-      <Paper sx={{ p: 1.5, mb: 3, display: 'flex', alignItems: 'center' }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder="Search by project name or chat content..."
-          value={searchQuery}
-          onChange={handleSearchChange}
-          size="medium"
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon color="action" />
-              </InputAdornment>
-            ),
-            endAdornment: searchQuery && (
-              <InputAdornment position="end">
-                <IconButton
-                  size="small"
-                  aria-label="clear search"
-                  onClick={clearSearch}
-                  edge="end"
-                >
-                  <ClearIcon />
-                </IconButton>
-              </InputAdornment>
-            ),
-            sx: { borderRadius: 2 }
-          }}
-        />
-      </Paper>
+      <TextField
+        fullWidth
+        variant="outlined"
+        placeholder="Search by project name or chat content..."
+        value={searchQuery}
+        onChange={handleSearchChange}
+        size="medium"
+        sx={{ mb: 3 }}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon color="action" />
+            </InputAdornment>
+          ),
+          endAdornment: searchQuery && (
+            <InputAdornment position="end">
+              <IconButton
+                size="small"
+                aria-label="clear search"
+                onClick={clearSearch}
+                edge="end"
+              >
+                <ClearIcon />
+              </IconButton>
+            </InputAdornment>
+          ),
+          sx: { borderRadius: 2 }
+        }}
+      />
       
       {isDemo && (
         <Alert severity="info" sx={{ mb: 3, borderRadius: 3 }}>

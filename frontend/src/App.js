@@ -10,9 +10,9 @@ import Header from './components/Header';
 // Define our color palette centrally - using rich, modern colors
 const colors = {
   primary: {
-    main: '#6E2CF4',    // Rich purple
-    light: '#8F58F6',   // Light purple
-    dark: '#4A0DB2',    // Dark purple
+    main: '#00bbff',    // Rich purple
+    light: '#66d6ff',   // Light purple
+    dark: '#005e80',    // Dark purple
   },
   secondary: {
     main: '#FF6B35',    // Vibrant orange

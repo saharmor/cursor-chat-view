@@ -86,8 +86,8 @@ const ChatList = () => {
       };
 
       const demoProjects = [
-        ...createDemoSessions("dolores-voice-eval", "/simulated/path/dolores-voice-eval", "demo-voice-eval", 3), // Create 3 sessions
-        ...createDemoSessions("dolores-agent", "/simulated/path/dolores-agent", "demo-agent", 4) // Create 4 sessions
+        ...createDemoSessions("dolores-voice-eval", "/Users/saharm/Documents/codebase/dolores-voice-eval", "demo-voice-eval", 3), // Create 3 sessions
+        ...createDemoSessions("dolores-agent", "/Users/saharm/Documents/codebase/dolores-agent", "demo-agent", 4) // Create 4 sessions
       ];
 
       const combinedData = [...demoProjects, ...chatData]; // Put demo projects first
@@ -228,32 +228,28 @@ const ChatList = () => {
       console.log("Starting HTML export for session:", sessionId);
       console.log(`Making API request to: /api/chat/${sessionId}/export`);
       
-      const response = await axios({
-        method: 'GET',
-        url: `/api/chat/${sessionId}/export`,
-        responseType: 'text', 
-        headers: {
-          'Accept': 'text/html'
-        }
-      });
-      
-      const content = response.data;
-      console.log("Received content length:", content ? content.length : 0);
-      
-      if (!content || content.length === 0) {
-        throw new Error("Received empty or invalid content from server");
+      const response = await axios.get(
+        `/api/chat/${sessionId}/export`,
+        { responseType: 'blob' }
+      );
+
+      const blob = response.data;
+      console.log('Received blob size:', blob ? blob.size : 0);
+
+      if (!blob || blob.size === 0) {
+        throw new Error('Received empty or invalid content from server');
       }
-      
-      // Create a Blob with explicit UTF-8 encoding type
-      const blob = new Blob([content], { type: 'text/html;charset=utf-8' });
-      console.log("Created blob, size:", blob.size);
+
+      // Ensure the blob has the correct MIME type before saving
+      const typedBlob = blob.type ? blob : new Blob([blob], { type: 'text/html;charset=utf-8' });
+      console.log('Prepared typed blob, size:', typedBlob.size);
 
       // --- Download Logic Start ---
       const filename = `cursor-chat-${sessionId.slice(0, 8)}.html`;
       const link = document.createElement('a');
       
-      // Create an object URL for the blob
-      const url = URL.createObjectURL(blob);
+      // Create an object URL for the (possibly re-typed) blob
+      const url = URL.createObjectURL(typedBlob);
       link.href = url;
       link.download = filename;
       

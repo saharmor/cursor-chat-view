@@ -223,7 +223,7 @@ def extract_project_name_from_path(root_path, debug=False):
     
     if username_index >= 0 and username_index + 1 < len(path_parts):
         # First try specific project directories we know about by name
-        known_projects = ['genaisf', 'cursor-chat-view', 'cursor', 'cursor-apps', 'universal-github', 'inquiry']
+        known_projects = ['genaisf', 'cursor-view', 'cursor', 'cursor-apps', 'universal-github', 'inquiry']
         
         # Look at the most specific/deepest part of the path first
         for i in range(len(path_parts)-1, username_index, -1):
@@ -743,7 +743,7 @@ def format_chat_for_frontend(chat):
                         project['name'] = parts[5]
                         logger.debug(f"Set project name to specific codebase subdirectory: {parts[5]}")
                     else:
-                        project['name'] = "cursor-chat-view"  # Current project as default
+                        project['name'] = "cursor-view"  # Current project as default
         
         # If the project doesn't have a rootPath or it's very generic, enhance it with workspace_id
         if not project.get('rootPath') or project.get('rootPath') == '/' or project.get('rootPath') == '/Users':
@@ -985,7 +985,7 @@ def generate_standalone_html(chat):
 {messages_html}
     </div>
     <div style="margin-top: 30px; font-size: 12px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 15px;">
-        Exported from Cursor Chat Viewer
+        <a href="https://github.com/saharmor/cursor-view" target="_blank" rel="noopener noreferrer">Exported from Cursor View</a>
     </div>
 </body>
 </html>"""

@@ -96,30 +96,28 @@ const ChatDetail = () => {
   // Function to actually perform the export
   const proceedWithExport = async () => {
     try {
-      const response = await axios({
-        method: 'GET',
-        url: `/api/chat/${sessionId}/export`,
-        responseType: 'text', 
-        headers: {
-          'Accept': 'text/html'
-        }
-      });
-      
-      const content = response.data;
-      
-      if (!content || content.length === 0) {
-        throw new Error("Received empty or invalid content from server");
+      // Request the exported chat as a raw Blob so we can download it directly
+      const response = await axios.get(
+        `/api/chat/${sessionId}/export`,
+        { responseType: 'blob' }
+      );
+
+      const blob = response.data;
+
+      // Guard-check to avoid downloading an empty file
+      if (!blob || blob.size === 0) {
+        throw new Error('Received empty or invalid content from server');
       }
-      
-      // Create a Blob with explicit UTF-8 encoding type
-      const blob = new Blob([content], { type: 'text/html;charset=utf-8' });
+
+      // Ensure the blob has the correct MIME type
+      const typedBlob = blob.type ? blob : new Blob([blob], { type: 'text/html;charset=utf-8' });
 
       // Download Logic
       const filename = `cursor-chat-${sessionId.slice(0, 8)}.html`;
       const link = document.createElement('a');
       
-      // Create an object URL for the blob
-      const url = URL.createObjectURL(blob);
+      // Create an object URL for the (possibly re-typed) blob
+      const url = URL.createObjectURL(typedBlob);
       link.href = url;
       link.download = filename;
       

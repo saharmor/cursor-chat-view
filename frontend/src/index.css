@@ -25,13 +25,13 @@ pre {
 }
 
 a {
-  color: #64B5F6;
+  color: #6E2CF4;
   text-decoration: none;
 }
 
 a:hover {
-  text-decoration: underline;
-  color: #90CAF9;
+  text-decoration: none;
+  color: #6E2CF4;
 }
 
 /* Custom scrollbar */

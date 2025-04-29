@@ -227,8 +227,10 @@ const ChatDetail = () => {
           to="/"
           startIcon={<ArrowBackIcon />}
           variant="outlined"
-          color="primary"
-          sx={{ borderRadius: 2 }}
+          sx={{ 
+            borderRadius: 2,
+            color: 'white'
+          }}
         >
           Back to all chats
         </Button>
@@ -394,7 +396,7 @@ const ChatDetail = () => {
                   '& a': { 
                     color: message.role === 'user' ? 'primary.main' : 'secondary.main',
                     textDecoration: 'none',
-                    '&:hover': { textDecoration: 'underline' }
+                    '&:hover': { textDecoration: 'none' }
                   }
                 }}>
                   {typeof message.content === 'string' ? (

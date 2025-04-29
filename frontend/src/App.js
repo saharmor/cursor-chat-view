@@ -7,37 +7,37 @@ import ChatList from './components/ChatList';
 import ChatDetail from './components/ChatDetail';
 import Header from './components/Header';
 
-// Define our color palette centrally - inspired by modern dark UI with vibrant accents
+// Define our color palette centrally - using rich, modern colors
 const colors = {
   primary: {
-    main: '#4A89DC',    // Blue accent
-    light: '#64B5F6',   // Light blue
-    dark: '#2962FF',    // Dark blue
+    main: '#6E2CF4',    // Rich purple
+    light: '#8F58F6',   // Light purple
+    dark: '#4A0DB2',    // Dark purple
   },
   secondary: {
-    main: '#F5F5F5',    // White accent
-    light: '#FFFFFF',   // Pure white
-    dark: '#E0E0E0',    // Light gray
+    main: '#FF6B35',    // Vibrant orange
+    light: '#FF8F5E',   // Light orange
+    dark: '#E04F1D',    // Dark orange
   },
   tertiary: {
-    main: '#52C41A',    // Green accent
-    light: '#73D13D',   // Light green
-    dark: '#389E0D',    // Dark green
+    main: '#3EBD64',    // Vibrant green
+    light: '#5FD583',   // Light green
+    dark: '#2A9E4A',    // Dark green
   },
   background: {
     default: '#121212', // Dark background
     paper: '#1E1E1E',   // Slightly lighter dark for cards/elements
-    gradient: 'linear-gradient(135deg, #0D2B4D 0%, #1E1E1E 50%, #1F5022 100%)', // Gradient using blue, dark, and green
+    gradient: 'linear-gradient(135deg, #6E2CF4 0%, #FF6B35 50%, #3EBD64 100%)', // Gradient from purple to orange to green
   },
   text: {
     primary: '#FFFFFF',  // White text
     secondary: '#B3B3B3', // Lighter gray for secondary text
   },
   info: {
-    main: '#40A9FF',    // Blue
+    main: '#39C0F7',    // Bright blue
   },
   success: {
-    main: '#52C41A',    // Green
+    main: '#3EBD64',    // Green
   },
   warning: {
     main: '#FAAD14',    // Amber
@@ -98,15 +98,38 @@ const modernTheme = createTheme({
         },
       },
     },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-root': {
+            backgroundColor: 'transparent',
+            '&:hover': {
+              backgroundColor: 'transparent',
+            },
+            '&.Mui-focused': {
+              backgroundColor: 'transparent',
+            }
+          }
+        }
+      }
+    },
     MuiButton: {
       styleOverrides: {
         root: {
           textTransform: 'none',
           borderRadius: 6,
           fontWeight: 500,
+          color: 'white',
         },
         contained: {
           boxShadow: '0 2px 4px rgba(0, 0, 0, 0.15)',
+        },
+        outlined: {
+          color: 'white',
+          borderColor: 'rgba(255,255,255,0.5)',
+          '&:hover': {
+            borderColor: 'rgba(255,255,255,0.8)',
+          }
         },
       },
     },

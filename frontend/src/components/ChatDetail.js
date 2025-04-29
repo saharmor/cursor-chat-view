@@ -243,13 +243,22 @@ const ChatDetail = () => {
           sx={{ 
             borderRadius: 2,
             position: 'relative',
-            '&::after': {
+            '&::after': dontShowExportWarning ? null : {
               content: '""',
               position: 'absolute',
               borderRadius: '50%',
               top: '4px',
-              right: '4px'
-            }
+              right: '4px',
+              width: '8px', // Adjusted size for button
+              height: '8px' // Adjusted size for button
+              // backgroundColor: 'warning.main', // We will add this conditionally
+            },
+            // Conditionally add the background color if the warning should be shown
+            ...( !dontShowExportWarning && {
+              '&::after': { 
+                backgroundColor: 'warning.main'
+              }
+            })
           }}
         >
           Export as HTML

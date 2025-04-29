@@ -36,6 +36,7 @@ const Header = () => {
             size="small"
             sx={{ 
               borderColor: 'rgba(255,255,255,0.5)', 
+              color: 'white',
               '&:hover': { 
                 borderColor: 'rgba(255,255,255,0.8)',
                 backgroundColor: 'rgba(255,255,255,0.1)'

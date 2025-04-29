@@ -326,7 +326,11 @@ const ChatList = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => handleExportWarningClose(false)} color="primary">
+          <Button 
+            onClick={() => handleExportWarningClose(false)} 
+            color="primary"
+            sx={{ color: 'white' }}
+          >
             Cancel
           </Button>
           <Button onClick={() => handleExportWarningClose(true)} color="primary" variant="contained">
@@ -382,7 +386,10 @@ const ChatList = () => {
           <Button 
             startIcon={<RefreshIcon />}
             onClick={fetchChats}
-            sx={{ mt: 1 }}
+            sx={{ 
+              mt: 1,
+              color: 'white'
+            }}
             size="small"
             variant="outlined"
           >
@@ -629,7 +636,7 @@ const ChatList = () => {
                                 sx={{ 
                                   ml: 'auto',
                                   position: 'relative',
-                                  '&::after': {
+                                  '&::after': dontShowExportWarning ? null : {
                                     content: '""',
                                     position: 'absolute',
                                     width: '6px',

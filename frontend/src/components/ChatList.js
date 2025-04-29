@@ -622,11 +622,24 @@ const ChatList = () => {
                             )}
                           </CardContent>
                           <CardActions sx={{ mt: 'auto', pt: 0 }}>
-                            <Tooltip title="Export as HTML">
+                            <Tooltip title="Export as HTML (Warning: Check for sensitive data)">
                               <IconButton 
                                 size="small" 
                                 onClick={(e) => handleExport(e, chat.session_id)}
-                                sx={{ ml: 'auto' }}
+                                sx={{ 
+                                  ml: 'auto',
+                                  position: 'relative',
+                                  '&::after': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    width: '6px',
+                                    height: '6px',
+                                    backgroundColor: 'warning.main',
+                                    borderRadius: '50%',
+                                    top: '2px',
+                                    right: '2px'
+                                  }
+                                }}
                               >
                                 <FileDownloadIcon fontSize="small" />
                               </IconButton>

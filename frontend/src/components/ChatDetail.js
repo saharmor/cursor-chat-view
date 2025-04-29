@@ -14,6 +14,13 @@ import {
   Avatar,
   alpha,
   Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControlLabel,
+  Checkbox,
+  DialogContentText,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import FolderIcon from '@mui/icons-material/Folder';
@@ -24,6 +31,7 @@ import StorageIcon from '@mui/icons-material/Storage';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import DataObjectIcon from '@mui/icons-material/DataObject';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import WarningIcon from '@mui/icons-material/Warning';
 import { colors } from '../App';
 
 const ChatDetail = () => {
@@ -31,6 +39,8 @@ const ChatDetail = () => {
   const [chat, setChat] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [dontShowExportWarning, setDontShowExportWarning] = useState(false);
 
   useEffect(() => {
     const fetchChat = async () => {
@@ -45,22 +55,82 @@ const ChatDetail = () => {
     };
 
     fetchChat();
+    
+    // Check if user has previously chosen to not show the export warning
+    const warningPreference = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('dontShowExportWarning='));
+    
+    if (warningPreference) {
+      setDontShowExportWarning(warningPreference.split('=')[1] === 'true');
+    }
   }, [sessionId]);
 
-  const handleExport = async () => {
+  // Handle export warning confirmation
+  const handleExportWarningClose = (confirmed) => {
+    setExportModalOpen(false);
+    
+    // Save preference in cookies if "Don't show again" is checked
+    if (dontShowExportWarning) {
+      const expiryDate = new Date();
+      expiryDate.setFullYear(expiryDate.getFullYear() + 1); // Cookie lasts 1 year
+      document.cookie = `dontShowExportWarning=true; expires=${expiryDate.toUTCString()}; path=/`;
+    }
+    
+    // If confirmed, proceed with export
+    if (confirmed) {
+      proceedWithExport();
+    }
+  };
+
+  // Function to initiate export process
+  const handleExport = () => {
+    // Check if warning should be shown
+    if (dontShowExportWarning) {
+      proceedWithExport();
+    } else {
+      setExportModalOpen(true);
+    }
+  };
+
+  // Function to actually perform the export
+  const proceedWithExport = async () => {
     try {
-      const { data: blob } = await axios.get(
-        `/api/chat/${sessionId}/export`,
-        { responseType: 'blob' }       // ← expect a Blob, not text
-      );
-  
-      const url = URL.createObjectURL(blob);
+      const response = await axios({
+        method: 'GET',
+        url: `/api/chat/${sessionId}/export`,
+        responseType: 'text', 
+        headers: {
+          'Accept': 'text/html'
+        }
+      });
+      
+      const content = response.data;
+      
+      if (!content || content.length === 0) {
+        throw new Error("Received empty or invalid content from server");
+      }
+      
+      // Create a Blob with explicit UTF-8 encoding type
+      const blob = new Blob([content], { type: 'text/html;charset=utf-8' });
+
+      // Download Logic
+      const filename = `cursor-chat-${sessionId.slice(0, 8)}.html`;
       const link = document.createElement('a');
+      
+      // Create an object URL for the blob
+      const url = URL.createObjectURL(blob);
       link.href = url;
-      link.download = `cursor-chat-${sessionId.slice(0, 8)}.html`;
+      link.download = filename;
+      
+      // Append link to the body (required for Firefox)
       document.body.appendChild(link);
+      
+      // Programmatically click the link to trigger the download
       link.click();
-      link.remove();
+      
+      // Clean up: remove the link and revoke the object URL
+      document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Export failed:', err);
@@ -116,6 +186,41 @@ const ChatDetail = () => {
 
   return (
     <Container sx={{ mb: 6 }}>
+      {/* Export Warning Modal */}
+      <Dialog
+        open={exportModalOpen}
+        onClose={() => handleExportWarningClose(false)}
+        aria-labelledby="export-warning-dialog-title"
+      >
+        <DialogTitle id="export-warning-dialog-title" sx={{ display: 'flex', alignItems: 'center' }}>
+          <WarningIcon sx={{ color: 'warning.main', mr: 1 }} />
+          Export Warning
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Please make sure your exported chat doesn't include sensitive data such as API keys and customer information.
+          </DialogContentText>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={dontShowExportWarning}
+                onChange={(e) => setDontShowExportWarning(e.target.checked)}
+              />
+            }
+            label="Don't show this warning again"
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => handleExportWarningClose(false)} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={() => handleExportWarningClose(true)} color="primary" variant="contained">
+            Continue Export
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, mt: 2 }}>
         <Button
           component={Link}
@@ -133,7 +238,17 @@ const ChatDetail = () => {
           startIcon={<FileDownloadIcon />}
           variant="contained"
           color="primary"
-          sx={{ borderRadius: 2 }}
+          sx={{ 
+            borderRadius: 2,
+            position: 'relative',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              borderRadius: '50%',
+              top: '4px',
+              right: '4px'
+            }
+          }}
         >
           Export as HTML
         </Button>

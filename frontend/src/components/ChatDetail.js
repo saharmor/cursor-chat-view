@@ -141,7 +141,7 @@ const ChatDetail = () => {
   if (loading) {
     return (
       <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '70vh' }}>
-        <CircularProgress />
+        <CircularProgress sx={{ color: colors.highlightColor }} />
       </Container>
     );
   }
@@ -212,10 +212,10 @@ const ChatDetail = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => handleExportWarningClose(false)} color="primary">
+          <Button onClick={() => handleExportWarningClose(false)} color="highlight">
             Cancel
           </Button>
-          <Button onClick={() => handleExportWarningClose(true)} color="primary" variant="contained">
+          <Button onClick={() => handleExportWarningClose(true)} color="highlight" variant="contained">
             Continue Export
           </Button>
         </DialogActions>
@@ -239,10 +239,13 @@ const ChatDetail = () => {
           onClick={handleExport}
           startIcon={<FileDownloadIcon />}
           variant="contained"
-          color="primary"
+          color="highlight"
           sx={{ 
             borderRadius: 2,
             position: 'relative',
+            '&:hover': {
+              backgroundColor: alpha(colors.highlightColor, 0.8),
+            },
             '&::after': dontShowExportWarning ? null : {
               content: '""',
               position: 'absolute',
@@ -251,7 +254,6 @@ const ChatDetail = () => {
               right: '4px',
               width: '8px', // Adjusted size for button
               height: '8px' // Adjusted size for button
-              // backgroundColor: 'warning.main', // We will add this conditionally
             },
             // Conditionally add the background color if the warning should be shown
             ...( !dontShowExportWarning && {
@@ -274,7 +276,7 @@ const ChatDetail = () => {
         }}
       >
         <Box sx={{ 
-          background: `linear-gradient(90deg, ${colors.primary.main} 0%, ${colors.primary.light} 100%)`,
+          background: `linear-gradient(90deg, ${colors.highlightColor} 0%, ${colors.highlightColor.light} 100%)`,
           color: 'white',
           px: 3,
           py: 1.5,
@@ -290,7 +292,6 @@ const ChatDetail = () => {
               size="small"
               sx={{ 
                 fontWeight: 500,
-                backgroundColor: 'rgba(255,255,255,0.25)',
                 color: 'white',
                 '& .MuiChip-icon': { color: 'white' },
                 '& .MuiChip-label': { px: 1 }
@@ -307,7 +308,7 @@ const ChatDetail = () => {
             alignItems: 'center'
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <AccountTreeIcon sx={{ mr: 0.5, color: 'primary.main', opacity: 0.8, fontSize: 18 }} />
+              <AccountTreeIcon sx={{ mr: 0.5, color: colors.highlightColor, opacity: 0.8, fontSize: 18 }} />
               <Typography variant="body2" color="text.secondary">
                 <strong>Path:</strong> {chat.project?.rootPath || 'Unknown location'}
               </Typography>
@@ -315,7 +316,7 @@ const ChatDetail = () => {
             
             {chat.workspace_id && (
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <StorageIcon sx={{ mr: 0.5, color: 'secondary.main', opacity: 0.8, fontSize: 18 }} />
+                <StorageIcon sx={{ mr: 0.5, color: colors.highlightColor, opacity: 0.8, fontSize: 18 }} />
                 <Typography variant="body2" color="text.secondary">
                   <strong>Workspace:</strong> {chat.workspace_id}
                 </Typography>
@@ -324,7 +325,7 @@ const ChatDetail = () => {
             
             {chat.db_path && (
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <DataObjectIcon sx={{ mr: 0.5, color: 'info.main', opacity: 0.8, fontSize: 18 }} />
+                <DataObjectIcon sx={{ mr: 0.5, color: colors.highlightColor, opacity: 0.8, fontSize: 18 }} />
                 <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
                   <strong>DB:</strong> {chat.db_path.split('/').pop()}
                 </Typography>
@@ -351,7 +352,7 @@ const ChatDetail = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
                 <Avatar
                   sx={{
-                    bgcolor: message.role === 'user' ? 'primary.main' : 'secondary.main',
+                    bgcolor: message.role === 'user' ? colors.highlightColor : colors.secondary.main,
                     width: 32,
                     height: 32,
                     mr: 1.5,
@@ -371,11 +372,9 @@ const ChatDetail = () => {
                   p: 2.5, 
                   ml: message.role === 'user' ? 0 : 5,
                   mr: message.role === 'assistant' ? 0 : 5,
-                  backgroundColor: message.role === 'user' 
-                    ? alpha(colors.primary.main, 0.04) 
-                    : alpha(colors.secondary.main, 0.04),
+                  backgroundColor:alpha(colors.highlightColor, 0.04),
                   borderLeft: '4px solid',
-                  borderColor: message.role === 'user' ? 'primary.main' : 'secondary.main',
+                  borderColor: message.role === 'user' ? colors.highlightColor : colors.secondary.main,
                   borderRadius: 2
                 }}
               >
@@ -385,7 +384,7 @@ const ChatDetail = () => {
                     overflowX: 'auto',
                     backgroundColor: message.role === 'user' 
                       ? alpha(colors.primary.main, 0.07) 
-                      : alpha(colors.secondary.main, 0.07),
+                      : colors.highlightColor,
                     borderRadius: 1,
                     p: 2
                   },
@@ -395,7 +394,7 @@ const ChatDetail = () => {
                     overflowX: 'auto',
                     backgroundColor: message.role === 'user' 
                       ? alpha(colors.primary.main, 0.07) 
-                      : alpha(colors.secondary.main, 0.07),
+                      : colors.highlightColor,
                     borderRadius: 0.5,
                     px: 0.8,
                     py: 0.2
@@ -403,7 +402,7 @@ const ChatDetail = () => {
                   '& img': { maxWidth: '100%' },
                   '& ul, & ol': { pl: 3 },
                   '& a': { 
-                    color: message.role === 'user' ? 'primary.main' : 'secondary.main',
+                    color: message.role === 'user' ? colors.highlightColor : colors.secondary.main,
                     textDecoration: 'none',
                     '&:hover': { textDecoration: 'none' }
                   }

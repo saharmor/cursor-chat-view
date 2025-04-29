@@ -24,6 +24,7 @@ const colors = {
     light: '#5FD583',   // Light green
     dark: '#2A9E4A',    // Dark green
   },
+  highlightColor: '#0cbcff8f', // New bright blue with transparency
   background: {
     default: '#121212', // Dark background
     paper: '#1E1E1E',   // Slightly lighter dark for cards/elements
@@ -59,6 +60,9 @@ const modernTheme = createTheme({
     success: colors.success,
     warning: colors.warning,
     error: colors.error,
+    highlight: {
+      main: colors.highlightColor
+    }
   },
   typography: {
     fontFamily: "'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
@@ -77,7 +81,7 @@ const modernTheme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 10,
-          boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
+          boxShadow: `0 4px 10px ${colors.highlightColor}`,
           backgroundColor: colors.background.paper,
         },
       },
@@ -94,7 +98,6 @@ const modernTheme = createTheme({
       styleOverrides: {
         root: {
           background: colors.background.gradient,
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
         },
       },
     },
@@ -122,13 +125,13 @@ const modernTheme = createTheme({
           color: 'white',
         },
         contained: {
-          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.15)',
+          boxShadow: `0 2px 4px ${colors.highlightColor}`,
         },
         outlined: {
           color: 'white',
-          borderColor: 'rgba(255,255,255,0.5)',
+          borderColor: colors.highlightColor,
           '&:hover': {
-            borderColor: 'rgba(255,255,255,0.8)',
+            borderColor: colors.highlightColor,
           }
         },
       },
@@ -140,6 +143,13 @@ const modernTheme = createTheme({
         },
       },
     },
+    MuiCircularProgress: {
+      styleOverrides: {
+        root: {
+          color: colors.highlightColor
+        }
+      }
+    }
   },
 });
 

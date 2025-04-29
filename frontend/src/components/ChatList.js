@@ -63,7 +63,36 @@ const ChatList = () => {
       const isSampleData = chatData.length > 0 && chatData[0].session_id?.startsWith('sample');
       setIsDemo(isSampleData);
       
-      setChats(chatData);
+      // FOR DEMO: Add two extra projects with multiple sessions
+      const createDemoSessions = (projectName, projectPath, workspaceId, numSessions) => {
+        const sessions = [];
+        for (let i = 1; i <= numSessions; i++) {
+          const numMessages = Math.floor(Math.random() * 25) + 5; // 5 to 30 messages
+          const messages = Array.from({ length: numMessages }, (_, index) => ({
+            content: `Demo Message ${index + 1} in session ${i} for ${projectName}. Lorem ipsum dolor sit amet, consectetur adipiscing elit.`,
+            timestamp: Date.now() / 1000 - (index * Math.random() * 7200 + 60), // Simulate messages over time with randomness
+          }));
+          
+          sessions.push({
+            project: { name: projectName, rootPath: projectPath, workspace_id: workspaceId },
+            messages: messages,
+            date: Date.now() / 1000 - (i * 86400 * Math.random()), // Vary session dates slightly
+            session_id: `demo-session-${projectName.toLowerCase().replace(/\s+/g, '-')}-${i}`,
+            workspace_id: workspaceId,
+            db_path: `demo/db/path/${projectName}` // Simplified demo path
+          });
+        }
+        return sessions;
+      };
+
+      const demoProjects = [
+        ...createDemoSessions("dolores-voice-eval", "/simulated/path/dolores-voice-eval", "demo-voice-eval", 3), // Create 3 sessions
+        ...createDemoSessions("dolores-agent", "/simulated/path/dolores-agent", "demo-agent", 4) // Create 4 sessions
+      ];
+
+      const combinedData = [...demoProjects, ...chatData]; // Put demo projects first
+      
+      setChats(combinedData); // Use combined data
       setLoading(false);
     } catch (err) {
       setError(err.message);
@@ -156,16 +185,6 @@ const ChatList = () => {
   // Handle search input change
   const handleSearchChange = (event) => {
     setSearchQuery(event.target.value);
-    
-    // Auto-expand all projects when searching
-    if (event.target.value.trim()) {
-      const expandAll = {};
-      chats.forEach(chat => {
-        const projectName = chat.project?.name || 'Unknown Project';
-        expandAll[projectName] = true;
-      });
-      setExpandedProjects(expandAll);
-    }
   };
 
   // Handle export warning confirmation
@@ -281,7 +300,7 @@ const ChatList = () => {
   if (loading) {
     return (
       <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '70vh' }}>
-        <CircularProgress />
+        <CircularProgress sx={{ color: colors.highlightColor }} />
       </Container>
     );
   }
@@ -333,7 +352,7 @@ const ChatList = () => {
           >
             Cancel
           </Button>
-          <Button onClick={() => handleExportWarningClose(true)} color="primary" variant="contained">
+          <Button onClick={() => handleExportWarningClose(true)} color="highlight" variant="contained">
             Continue Export
           </Button>
         </DialogActions>
@@ -474,7 +493,7 @@ const ChatList = () => {
                     p: 2,
                     cursor: 'pointer',
                     '&:hover': {
-                      backgroundColor: alpha(colors.secondary.main, 0.02)
+                      backgroundColor: alpha(colors.highlightColor, 0.02)
                     }
                   }}
                   onClick={() => toggleProjectExpand(projectName)}
@@ -491,7 +510,7 @@ const ChatList = () => {
                         sx={{ 
                           ml: 2,
                           fontWeight: 500,
-                          backgroundColor: alpha(colors.secondary.main, 0.1),
+                          backgroundColor: colors.highlightColor,
                           color: colors.text.primary,
                           '& .MuiChip-label': {
                             px: 1.5
@@ -504,9 +523,9 @@ const ChatList = () => {
                       aria-label="show more"
                       sx={{ 
                         color: colors.text.primary,
-                        bgcolor: alpha(colors.secondary.main, 0.05),
+                        bgcolor: colors.highlightColor,
                         '&:hover': {
-                          bgcolor: alpha(colors.secondary.main, 0.1)
+                          bgcolor: alpha(colors.highlightColor, 0.8)
                         }
                       }}
                       onClick={(e) => {
@@ -604,7 +623,7 @@ const ChatList = () => {
                               <Box sx={{ 
                                 mt: 2, 
                                 p: 1.5, 
-                                backgroundColor: alpha(colors.secondary.main, 0.05),
+                                backgroundColor: alpha(colors.highlightColor, 0.1),
                                 borderRadius: 2,
                                 border: '1px solid',
                                 borderColor: alpha(colors.text.secondary, 0.05)

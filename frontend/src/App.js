@@ -7,43 +7,54 @@ import ChatList from './components/ChatList';
 import ChatDetail from './components/ChatDetail';
 import Header from './components/Header';
 
-// Define our color palette centrally
+// Define our color palette centrally - inspired by modern dark UI with vibrant accents
 const colors = {
   primary: {
-    main: '#2563EB',    // Blue 600
-    light: '#60A5FA',   // Blue 400
-    dark: '#1D4ED8',    // Blue 700
+    main: '#4A89DC',    // Blue accent
+    light: '#64B5F6',   // Light blue
+    dark: '#2962FF',    // Dark blue
   },
   secondary: {
-    main: '#DB467E',
-    light: '#E16997',
-    dark: '#C42766',
+    main: '#F5F5F5',    // White accent
+    light: '#FFFFFF',   // Pure white
+    dark: '#E0E0E0',    // Light gray
+  },
+  tertiary: {
+    main: '#52C41A',    // Green accent
+    light: '#73D13D',   // Light green
+    dark: '#389E0D',    // Dark green
   },
   background: {
-    default: '#F8FAFC',
-    paper: '#FFFFFF',
+    default: '#121212', // Dark background
+    paper: '#1E1E1E',   // Slightly lighter dark for cards/elements
+    gradient: 'linear-gradient(135deg, #0D2B4D 0%, #1E1E1E 50%, #1F5022 100%)', // Gradient using blue, dark, and green
+  },
+  text: {
+    primary: '#FFFFFF',  // White text
+    secondary: '#B3B3B3', // Lighter gray for secondary text
   },
   info: {
-    main: '#0EA5E9',    // Sky blue
+    main: '#40A9FF',    // Blue
   },
   success: {
-    main: '#22C55E',    // Green
+    main: '#52C41A',    // Green
   },
   warning: {
-    main: '#F59E0B',    // Amber
+    main: '#FAAD14',    // Amber
   },
   error: {
-    main: '#EF4444',    // Red
+    main: '#F5222D',    // Red
   },
 };
 
-// Create a modern, refined theme for the app
+// Create a modern, sophisticated dark theme for the app
 const modernTheme = createTheme({
   palette: {
-    mode: 'light',
+    mode: 'dark',
     primary: colors.primary,
     secondary: colors.secondary,
     background: colors.background,
+    text: colors.text,
     info: colors.info,
     success: colors.success,
     warning: colors.warning,
@@ -66,7 +77,8 @@ const modernTheme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 10,
-          boxShadow: '0 4px 10px -2px rgba(0, 0, 0, 0.08)',
+          boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
+          backgroundColor: colors.background.paper,
         },
       },
     },
@@ -74,14 +86,15 @@ const modernTheme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 10,
+          backgroundColor: colors.background.paper,
         },
       },
     },
     MuiAppBar: {
       styleOverrides: {
         root: {
-          background: `linear-gradient(90deg, ${colors.primary.main} 0%, ${colors.primary.light} 100%)`,
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+          background: colors.background.gradient,
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
         },
       },
     },
@@ -93,7 +106,7 @@ const modernTheme = createTheme({
           fontWeight: 500,
         },
         contained: {
-          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.08)',
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.15)',
         },
       },
     },

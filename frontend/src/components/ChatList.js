@@ -379,14 +379,16 @@ const ChatList = () => {
               >
                 <Box 
                   sx={{ 
-                    background: `linear-gradient(90deg, ${colors.primary.main} 0%, ${colors.primary.light} 100%)`,
-                    color: 'white',
+                    background: colors.background.paper,
+                    borderBottom: '1px solid',
+                    borderColor: alpha(colors.text.secondary, 0.1),
+                    color: colors.text.primary,
                     p: 2
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <FolderIcon sx={{ mr: 1.5, fontSize: 28 }} />
+                      <FolderIcon sx={{ mr: 1.5, fontSize: 28, color: colors.text.secondary }} />
                       <Typography variant="h6" sx={{ fontWeight: 600 }}>
                         {projectData.name}
                       </Typography>
@@ -396,8 +398,8 @@ const ChatList = () => {
                         sx={{ 
                           ml: 2,
                           fontWeight: 500,
-                          backgroundColor: 'rgba(255,255,255,0.25)',
-                          color: 'white',
+                          backgroundColor: alpha(colors.secondary.main, 0.1),
+                          color: colors.text.primary,
                           '& .MuiChip-label': {
                             px: 1.5
                           }
@@ -409,17 +411,17 @@ const ChatList = () => {
                       aria-expanded={expandedProjects[projectName]}
                       aria-label="show more"
                       sx={{ 
-                        color: 'white',
-                        bgcolor: 'rgba(255,255,255,0.15)',
+                        color: colors.text.primary,
+                        bgcolor: alpha(colors.secondary.main, 0.05),
                         '&:hover': {
-                          bgcolor: 'rgba(255,255,255,0.25)'
+                          bgcolor: alpha(colors.secondary.main, 0.1)
                         }
                       }}
                     >
                       {expandedProjects[projectName] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                     </IconButton>
                   </Box>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)', mt: 0.5 }}>
+                  <Typography variant="body2" sx={{ color: colors.text.secondary, mt: 0.5 }}>
                     {projectData.path}
                   </Typography>
                 </Box>
@@ -453,8 +455,8 @@ const ChatList = () => {
                             flexDirection: 'column',
                             transition: 'all 0.3s cubic-bezier(.17,.67,.83,.67)',
                             textDecoration: 'none',
-                            borderTop: '4px solid',
-                            borderColor: 'primary.main',
+                            borderTop: '1px solid',
+                            borderColor: alpha(colors.text.secondary, 0.1),
                             '&:hover': {
                               transform: 'translateY(-8px)',
                               boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
@@ -479,7 +481,7 @@ const ChatList = () => {
                             <Divider sx={{ my: 1.5 }} />
                             
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                              <MessageIcon fontSize="small" sx={{ mr: 1, color: 'primary.main' }} />
+                              <MessageIcon fontSize="small" sx={{ mr: 1, color: colors.text.secondary }} />
                               <Typography variant="body2" fontWeight="500">
                                 {Array.isArray(chat.messages) ? chat.messages.length : 0} messages
                               </Typography>
@@ -505,8 +507,10 @@ const ChatList = () => {
                               <Box sx={{ 
                                 mt: 2, 
                                 p: 1.5, 
-                                backgroundColor: alpha(colors.primary.main, 0.05),
-                                borderRadius: 2
+                                backgroundColor: alpha(colors.secondary.main, 0.05),
+                                borderRadius: 2,
+                                border: '1px solid',
+                                borderColor: alpha(colors.text.secondary, 0.05)
                               }}>
                                 <Typography 
                                   variant="body2" 

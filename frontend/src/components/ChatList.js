@@ -383,8 +383,13 @@ const ChatList = () => {
                     borderBottom: '1px solid',
                     borderColor: alpha(colors.text.secondary, 0.1),
                     color: colors.text.primary,
-                    p: 2
+                    p: 2,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      backgroundColor: alpha(colors.secondary.main, 0.02)
+                    }
                   }}
+                  onClick={() => toggleProjectExpand(projectName)}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -407,7 +412,6 @@ const ChatList = () => {
                       />
                     </Box>
                     <IconButton 
-                      onClick={() => toggleProjectExpand(projectName)}
                       aria-expanded={expandedProjects[projectName]}
                       aria-label="show more"
                       sx={{ 
@@ -416,6 +420,11 @@ const ChatList = () => {
                         '&:hover': {
                           bgcolor: alpha(colors.secondary.main, 0.1)
                         }
+                      }}
+                      onClick={(e) => {
+                        // Prevent the click from reaching the parent Box
+                        e.stopPropagation();
+                        toggleProjectExpand(projectName);
                       }}
                     >
                       {expandedProjects[projectName] ? <ExpandLessIcon /> : <ExpandMoreIcon />}

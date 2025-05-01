@@ -4,6 +4,8 @@ Cursor View is a local tool to view, search, and export all your Cursor AI chat 
 
 **Privacy Note**: All data processing happens locally on your machine. No data is sent to any external servers.
 
+<img width="1625" alt="Screenshot 2025-05-01 at 7 47 47 AM-min" src="https://github.com/user-attachments/assets/3e439e0e-6d6b-4651-947d-9c76565e35c5" />
+
 ## Setup & Running
 
 1. Clone this repository

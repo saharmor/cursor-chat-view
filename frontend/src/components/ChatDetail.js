@@ -21,6 +21,10 @@ import {
   FormControlLabel,
   Checkbox,
   DialogContentText,
+  Radio,
+  RadioGroup,
+  FormControl,
+  FormLabel,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import FolderIcon from '@mui/icons-material/Folder';
@@ -40,6 +44,8 @@ const ChatDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [formatDialogOpen, setFormatDialogOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState('html');
   const [dontShowExportWarning, setDontShowExportWarning] = useState(false);
 
   useEffect(() => {
@@ -66,6 +72,24 @@ const ChatDetail = () => {
     }
   }, [sessionId]);
 
+  // Handle format dialog selection
+  const handleFormatDialogOpen = () => {
+    setFormatDialogOpen(true);
+  };
+
+  const handleFormatDialogClose = (confirmed) => {
+    setFormatDialogOpen(false);
+    
+    if (confirmed) {
+      // After format selection, show warning dialog or proceed directly
+      if (dontShowExportWarning) {
+        proceedWithExport(exportFormat);
+      } else {
+        setExportModalOpen(true);
+      }
+    }
+  };
+
   // Handle export warning confirmation
   const handleExportWarningClose = (confirmed) => {
     setExportModalOpen(false);
@@ -79,26 +103,22 @@ const ChatDetail = () => {
     
     // If confirmed, proceed with export
     if (confirmed) {
-      proceedWithExport();
+      proceedWithExport(exportFormat);
     }
   };
 
   // Function to initiate export process
   const handleExport = () => {
-    // Check if warning should be shown
-    if (dontShowExportWarning) {
-      proceedWithExport();
-    } else {
-      setExportModalOpen(true);
-    }
+    // First open format selection dialog
+    handleFormatDialogOpen();
   };
 
   // Function to actually perform the export
-  const proceedWithExport = async () => {
+  const proceedWithExport = async (format) => {
     try {
       // Request the exported chat as a raw Blob so we can download it directly
       const response = await axios.get(
-        `/api/chat/${sessionId}/export`,
+        `/api/chat/${sessionId}/export?format=${format}`,
         { responseType: 'blob' }
       );
 
@@ -110,10 +130,12 @@ const ChatDetail = () => {
       }
 
       // Ensure the blob has the correct MIME type
-      const typedBlob = blob.type ? blob : new Blob([blob], { type: 'text/html;charset=utf-8' });
+      const mimeType = format === 'json' ? 'application/json;charset=utf-8' : 'text/html;charset=utf-8';
+      const typedBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
 
       // Download Logic
-      const filename = `cursor-chat-${sessionId.slice(0, 8)}.html`;
+      const extension = format === 'json' ? 'json' : 'html';
+      const filename = `cursor-chat-${sessionId.slice(0, 8)}.${extension}`;
       const link = document.createElement('a');
       
       // Create an object URL for the (possibly re-typed) blob
@@ -184,6 +206,42 @@ const ChatDetail = () => {
 
   return (
     <Container sx={{ mb: 6 }}>
+      {/* Format Selection Dialog */}
+      <Dialog
+        open={formatDialogOpen}
+        onClose={() => handleFormatDialogClose(false)}
+        aria-labelledby="format-selection-dialog-title"
+      >
+        <DialogTitle id="format-selection-dialog-title" sx={{ display: 'flex', alignItems: 'center' }}>
+          <FileDownloadIcon sx={{ color: colors.highlightColor, mr: 1 }} />
+          Export Format
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Please select the export format for your chat:
+          </DialogContentText>
+          <FormControl component="fieldset" sx={{ mt: 2 }}>
+            <RadioGroup
+              aria-label="export-format"
+              name="export-format"
+              value={exportFormat}
+              onChange={(e) => setExportFormat(e.target.value)}
+            >
+              <FormControlLabel value="html" control={<Radio />} label="HTML (styled readable format)" />
+              <FormControlLabel value="json" control={<Radio />} label="JSON (data for further processing)" />
+            </RadioGroup>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => handleFormatDialogClose(false)} color="highlight">
+            Cancel
+          </Button>
+          <Button onClick={() => handleFormatDialogClose(true)} color="highlight" variant="contained">
+            Continue
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Export Warning Modal */}
       <Dialog
         open={exportModalOpen}
@@ -261,7 +319,7 @@ const ChatDetail = () => {
             })
           }}
         >
-          Export as HTML
+          Export
         </Button>
       </Box>
 

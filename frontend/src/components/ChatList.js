@@ -28,6 +28,7 @@ import {
   FormControlLabel,
   Checkbox,
   DialogContentText,
+  Switch,
 } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
@@ -47,6 +48,7 @@ const ChatList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isDemo, setIsDemo] = useState(false);
+  const [showDemoChats, setShowDemoChats] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -85,14 +87,17 @@ const ChatList = () => {
         return sessions;
       };
 
-      const demoProjects = [
-        ...createDemoSessions("dolores-voice-eval", "/Users/saharm/Documents/codebase/dolores-voice-eval", "demo-voice-eval", 3), // Create 3 sessions
-        ...createDemoSessions("dolores-agent", "/Users/saharm/Documents/codebase/dolores-agent", "demo-agent", 4) // Create 4 sessions
-      ];
+      let demoProjects = [];
+      if (showDemoChats) {
+        demoProjects = [
+          ...createDemoSessions("dolores-voice-eval", "/Users/saharm/Documents/codebase/dolores-voice-eval", "demo-voice-eval", 3),
+          ...createDemoSessions("dolores-agent", "/Users/saharm/Documents/codebase/dolores-agent", "demo-agent", 4)
+        ];
+      }
 
-      const combinedData = [...demoProjects, ...chatData]; // Put demo projects first
+      const combinedData = [...demoProjects, ...chatData];
       
-      setChats(combinedData); // Use combined data
+      setChats(combinedData);
       setLoading(false);
     } catch (err) {
       setError(err.message);
@@ -100,7 +105,20 @@ const ChatList = () => {
     }
   };
 
+  // Toggle demo chats visibility
+  const toggleDemoChats = () => {
+    const newValue = !showDemoChats;
+    setShowDemoChats(newValue);
+    // Save preference to localStorage
+    localStorage.setItem('showDemoChats', newValue ? 'true' : 'false');
+    fetchChats();
+  };
+
   useEffect(() => {
+    // Load demo chats preference from localStorage (default to false)
+    const savedShowDemoChats = localStorage.getItem('showDemoChats') === 'true';
+    setShowDemoChats(savedShowDemoChats);
+    
     fetchChats();
     
     // Check if user has previously chosen to not show the export warning
@@ -112,6 +130,11 @@ const ChatList = () => {
       setDontShowExportWarning(warningPreference.split('=')[1] === 'true');
     }
   }, []);
+
+  // Watch for changes to showDemoChats and refetch when it changes
+  useEffect(() => {
+    fetchChats();
+  }, [showDemoChats]);
 
   const toggleProjectExpand = (projectName) => {
     setExpandedProjects(prev => ({
@@ -314,7 +337,42 @@ const ChatList = () => {
   const chatsByProject = filteredChatsByProject();
 
   return (
-    <Container>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      {/* No need to show error again since we have the conditional return above */}
+      
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" component="h1" sx={{ color: colors.textColor }}>
+          Cursor Chat History
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <FormControlLabel
+            control={
+              <Switch 
+                checked={showDemoChats}
+                onChange={toggleDemoChats}
+                color="primary"
+              />
+            }
+            label="Show Demo Chats"
+          />
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={fetchChats}
+            sx={{ 
+              color: colors.highlightColor,
+              borderColor: alpha(colors.highlightColor, 0.5),
+              '&:hover': {
+                borderColor: colors.highlightColor,
+                backgroundColor: alpha(colors.highlightColor, 0.1),
+              }
+            }}
+          >
+            Refresh
+          </Button>
+        </Box>
+      </Box>
+      
       {/* Export Warning Modal */}
       <Dialog
         open={exportModalOpen}

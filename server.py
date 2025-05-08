@@ -837,10 +837,10 @@ def get_chat(session_id):
 
 @app.route('/api/chat/<session_id>/export', methods=['GET'])
 def export_chat(session_id):
-    """Export a specific chat session as standalone HTML (TEMP: text/plain)."""
-    logger.critical(f"!!!!!!!! EXPORT_CHAT ENDPOINT HIT for session: {session_id} !!!!!!!!")
+    """Export a specific chat session as standalone HTML or JSON."""
     try:
         logger.info(f"Received request to export chat {session_id} from {request.remote_addr}")
+        export_format = request.args.get('format', 'html').lower()
         chats = extract_chats()
         
         for chat in chats:
@@ -849,16 +849,28 @@ def export_chat(session_id):
                 if chat['session'].get('composerId') == session_id:
                     formatted_chat = format_chat_for_frontend(chat)
                     
-                    html_content = generate_standalone_html(formatted_chat)
-                    return Response(
-                        html_content,
-                        mimetype="text/html; charset=utf-8",
-                        headers={
-                            "Content-Disposition": f'attachment; filename="cursor-chat-{session_id[:8]}.html"',
-                            "Content-Length": str(len(html_content)),
-                            "Cache-Control": "no-store",
-                        },
-                    )
+                    if export_format == 'json':
+                        # Export as JSON
+                        return Response(
+                            json.dumps(formatted_chat, indent=2),
+                            mimetype="application/json; charset=utf-8",
+                            headers={
+                                "Content-Disposition": f'attachment; filename="cursor-chat-{session_id[:8]}.json"',
+                                "Cache-Control": "no-store",
+                            },
+                        )
+                    else:
+                        # Default to HTML export
+                        html_content = generate_standalone_html(formatted_chat)
+                        return Response(
+                            html_content,
+                            mimetype="text/html; charset=utf-8",
+                            headers={
+                                "Content-Disposition": f'attachment; filename="cursor-chat-{session_id[:8]}.html"',
+                                "Content-Length": str(len(html_content)),
+                                "Cache-Control": "no-store",
+                            },
+                        )
         
         logger.warning(f"Chat with ID {session_id} not found for export")
         return jsonify({"error": "Chat not found"}), 404
@@ -1012,4 +1024,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     logger.info(f"Starting server on port {args.port}")
-    app.run(debug=args.debug, port=args.port)
+    app.run(host='127.0.0.1', port=args.port, debug=args.debug)

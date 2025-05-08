@@ -227,8 +227,8 @@ const ChatDetail = () => {
               value={exportFormat}
               onChange={(e) => setExportFormat(e.target.value)}
             >
-              <FormControlLabel value="html" control={<Radio />} label="HTML (styled readable format)" />
-              <FormControlLabel value="json" control={<Radio />} label="JSON (data for further processing)" />
+              <FormControlLabel value="html" control={<Radio />} label="HTML" />
+              <FormControlLabel value="json" control={<Radio />} label="JSON" />
             </RadioGroup>
           </FormControl>
         </DialogContent>

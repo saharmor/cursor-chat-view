@@ -305,7 +305,7 @@ def workspace_info(db: pathlib.Path):
         paths = []
         for e in ents:
             resource = e.get("editor", {}).get("resource", "")
-            if resource and resource.startswith("file:///"):
+            if resource and isinstance(resource, str) and resource.startswith("file:///"):
                 paths.append(resource[len("file:///"):])
         
         # If we found file paths, extract the project name using the longest common prefix

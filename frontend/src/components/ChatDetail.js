@@ -14,17 +14,6 @@ import {
   Avatar,
   alpha,
   Stack,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControlLabel,
-  Checkbox,
-  DialogContentText,
-  Radio,
-  RadioGroup,
-  FormControl,
-  FormLabel,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import FolderIcon from '@mui/icons-material/Folder';
@@ -35,8 +24,9 @@ import StorageIcon from '@mui/icons-material/Storage';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import DataObjectIcon from '@mui/icons-material/DataObject';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import WarningIcon from '@mui/icons-material/Warning';
 import { colors } from '../App';
+import { exportChat, exportPreferences } from '../utils/exportUtils';
+import { FormatSelectionDialog, ExportWarningDialog } from './ExportDialogs';
 
 const ChatDetail = () => {
   const { sessionId } = useParams();
@@ -63,19 +53,8 @@ const ChatDetail = () => {
     fetchChat();
     
     // Check if user has previously chosen to not show the export warning
-    const warningPreference = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('dontShowExportWarning='));
-    
-    if (warningPreference) {
-      setDontShowExportWarning(warningPreference.split('=')[1] === 'true');
-    }
+    setDontShowExportWarning(exportPreferences.getDontShowWarning());
   }, [sessionId]);
-
-  // Handle format dialog selection
-  const handleFormatDialogOpen = () => {
-    setFormatDialogOpen(true);
-  };
 
   const handleFormatDialogClose = (confirmed) => {
     setFormatDialogOpen(false);
@@ -83,7 +62,7 @@ const ChatDetail = () => {
     if (confirmed) {
       // After format selection, show warning dialog or proceed directly
       if (dontShowExportWarning) {
-        proceedWithExport(exportFormat);
+        proceedWithExport();
       } else {
         setExportModalOpen(true);
       }
@@ -96,66 +75,24 @@ const ChatDetail = () => {
     
     // Save preference in cookies if "Don't show again" is checked
     if (dontShowExportWarning) {
-      const expiryDate = new Date();
-      expiryDate.setFullYear(expiryDate.getFullYear() + 1); // Cookie lasts 1 year
-      document.cookie = `dontShowExportWarning=true; expires=${expiryDate.toUTCString()}; path=/`;
+      exportPreferences.saveDontShowWarning(true);
     }
     
     // If confirmed, proceed with export
     if (confirmed) {
-      proceedWithExport(exportFormat);
+      proceedWithExport();
     }
   };
 
   // Function to initiate export process
   const handleExport = () => {
     // First open format selection dialog
-    handleFormatDialogOpen();
+    setFormatDialogOpen(true);
   };
 
   // Function to actually perform the export
-  const proceedWithExport = async (format) => {
-    try {
-      // Request the exported chat as a raw Blob so we can download it directly
-      const response = await axios.get(
-        `/api/chat/${sessionId}/export?format=${format}`,
-        { responseType: 'blob' }
-      );
-
-      const blob = response.data;
-
-      // Guard-check to avoid downloading an empty file
-      if (!blob || blob.size === 0) {
-        throw new Error('Received empty or invalid content from server');
-      }
-
-      // Ensure the blob has the correct MIME type
-      const mimeType = format === 'json' ? 'application/json;charset=utf-8' : 'text/html;charset=utf-8';
-      const typedBlob = blob.type ? blob : new Blob([blob], { type: mimeType });
-
-      // Download Logic
-      const extension = format === 'json' ? 'json' : 'html';
-      const filename = `cursor-chat-${sessionId.slice(0, 8)}.${extension}`;
-      const link = document.createElement('a');
-      
-      // Create an object URL for the (possibly re-typed) blob
-      const url = URL.createObjectURL(typedBlob);
-      link.href = url;
-      link.download = filename;
-      
-      // Append link to the body (required for Firefox)
-      document.body.appendChild(link);
-      
-      // Programmatically click the link to trigger the download
-      link.click();
-      
-      // Clean up: remove the link and revoke the object URL
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Export failed:', err);
-      alert('Failed to export chat – check console for details');
-    }
+  const proceedWithExport = async () => {
+    await exportChat(sessionId, exportFormat);
   };
 
   if (loading) {
@@ -206,76 +143,21 @@ const ChatDetail = () => {
 
   return (
     <Container sx={{ mb: 6 }}>
-      {/* Format Selection Dialog */}
-      <Dialog
+      {/* Use the reusable dialog components */}
+      <FormatSelectionDialog 
         open={formatDialogOpen}
-        onClose={() => handleFormatDialogClose(false)}
-        aria-labelledby="format-selection-dialog-title"
-      >
-        <DialogTitle id="format-selection-dialog-title" sx={{ display: 'flex', alignItems: 'center' }}>
-          <FileDownloadIcon sx={{ color: colors.highlightColor, mr: 1 }} />
-          Export Format
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Please select the export format for your chat:
-          </DialogContentText>
-          <FormControl component="fieldset" sx={{ mt: 2 }}>
-            <RadioGroup
-              aria-label="export-format"
-              name="export-format"
-              value={exportFormat}
-              onChange={(e) => setExportFormat(e.target.value)}
-            >
-              <FormControlLabel value="html" control={<Radio />} label="HTML" />
-              <FormControlLabel value="json" control={<Radio />} label="JSON" />
-            </RadioGroup>
-          </FormControl>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => handleFormatDialogClose(false)} color="highlight">
-            Cancel
-          </Button>
-          <Button onClick={() => handleFormatDialogClose(true)} color="highlight" variant="contained">
-            Continue
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Export Warning Modal */}
-      <Dialog
+        onClose={handleFormatDialogClose}
+        exportFormat={exportFormat}
+        setExportFormat={setExportFormat}
+        colors={colors}
+      />
+      
+      <ExportWarningDialog
         open={exportModalOpen}
-        onClose={() => handleExportWarningClose(false)}
-        aria-labelledby="export-warning-dialog-title"
-      >
-        <DialogTitle id="export-warning-dialog-title" sx={{ display: 'flex', alignItems: 'center' }}>
-          <WarningIcon sx={{ color: 'warning.main', mr: 1 }} />
-          Export Warning
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Please make sure your exported chat doesn't include sensitive data such as API keys and customer information.
-          </DialogContentText>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={dontShowExportWarning}
-                onChange={(e) => setDontShowExportWarning(e.target.checked)}
-              />
-            }
-            label="Don't show this warning again"
-            sx={{ mt: 2 }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => handleExportWarningClose(false)} color="highlight">
-            Cancel
-          </Button>
-          <Button onClick={() => handleExportWarningClose(true)} color="highlight" variant="contained">
-            Continue Export
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onClose={handleExportWarningClose}
+        dontShowWarning={dontShowExportWarning}
+        setDontShowWarning={setDontShowExportWarning}
+      />
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, mt: 2 }}>
         <Button
@@ -402,79 +284,49 @@ const ChatDetail = () => {
           </Typography>
         </Paper>
       ) : (
-        <Box sx={{ mb: 4 }}>
-          {messages.map((message, index) => (
-            <Box key={index} sx={{ mb: 3.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                <Avatar
-                  sx={{
-                    bgcolor: message.role === 'user' ? colors.highlightColor : colors.secondary.main,
-                    width: 32,
+        messages.map((message, index) => {
+          const isUser = message.role === 'user';
+          const bgColor = isUser ? alpha(colors.highlightColor, 0.08) : alpha('#e6f7e6', 0.8);
+          const borderColor = isUser ? colors.highlightColor : '#4CAF50';
+
+          return (
+            <Paper 
+              key={`msg-${index}`} 
+              sx={{ 
+                mb: 3, 
+                p: 2.5, 
+                borderRadius: 3,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                borderLeft: `4px solid ${borderColor}`,
+                backgroundColor: bgColor,
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1.5 }}>
+                <Avatar 
+                  sx={{ 
+                    mr: 1.5, 
+                    width: 32, 
                     height: 32,
-                    mr: 1.5,
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                    backgroundColor: isUser ? colors.highlightColor : '#4CAF50',
                   }}
                 >
-                  {message.role === 'user' ? <PersonIcon /> : <SmartToyIcon />}
+                  {isUser ? <PersonIcon fontSize="small" /> : <SmartToyIcon fontSize="small" />}
                 </Avatar>
-                <Typography variant="subtitle1" fontWeight="600">
-                  {message.role === 'user' ? 'You' : 'Cursor Assistant'}
+                <Typography variant="subtitle2" fontWeight="600">
+                  {isUser ? 'You' : 'Cursor AI'}
                 </Typography>
               </Box>
               
-              <Paper 
-                elevation={1}
-                sx={{ 
-                  p: 2.5, 
-                  ml: message.role === 'user' ? 0 : 5,
-                  mr: message.role === 'assistant' ? 0 : 5,
-                  backgroundColor:alpha(colors.highlightColor, 0.04),
-                  borderLeft: '4px solid',
-                  borderColor: message.role === 'user' ? colors.highlightColor : colors.secondary.main,
-                  borderRadius: 2
-                }}
-              >
-                <Box sx={{ 
-                  '& pre': { 
-                    maxWidth: '100%', 
-                    overflowX: 'auto',
-                    backgroundColor: message.role === 'user' 
-                      ? alpha(colors.primary.main, 0.07) 
-                      : colors.highlightColor,
-                    borderRadius: 1,
-                    p: 2
-                  },
-                  '& code': { 
-                    display: 'inline-block', 
-                    maxWidth: '100%', 
-                    overflowX: 'auto',
-                    backgroundColor: message.role === 'user' 
-                      ? alpha(colors.primary.main, 0.07) 
-                      : colors.highlightColor,
-                    borderRadius: 0.5,
-                    px: 0.8,
-                    py: 0.2
-                  },
-                  '& img': { maxWidth: '100%' },
-                  '& ul, & ol': { pl: 3 },
-                  '& a': { 
-                    color: message.role === 'user' ? colors.highlightColor : colors.secondary.main,
-                    textDecoration: 'none',
-                    '&:hover': { textDecoration: 'none' }
-                  }
-                }}>
-                  {typeof message.content === 'string' ? (
-                    <ReactMarkdown>
-                      {message.content}
-                    </ReactMarkdown>
-                  ) : (
-                    <Typography>Content unavailable</Typography>
-                  )}
-                </Box>
-              </Paper>
-            </Box>
-          ))}
-        </Box>
+              <Box sx={{ pl: 5.5 }}>
+                {typeof message.content === 'string' ? (
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                ) : (
+                  <Typography>Content unavailable</Typography>
+                )}
+              </Box>
+            </Paper>
+          );
+        })
       )}
     </Container>
   );

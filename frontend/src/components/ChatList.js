@@ -21,13 +21,7 @@ import {
   InputAdornment,
   CardActions,
   Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   FormControlLabel,
-  Checkbox,
-  DialogContentText,
   Switch,
 } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
@@ -40,8 +34,9 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import WarningIcon from '@mui/icons-material/Warning';
 import { colors } from '../App';
+import { exportChat, exportPreferences } from '../utils/exportUtils';
+import { FormatSelectionDialog, ExportWarningDialog } from './ExportDialogs';
 
 const ChatList = () => {
   const [chats, setChats] = useState([]);
@@ -54,6 +49,8 @@ const ChatList = () => {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [dontShowExportWarning, setDontShowExportWarning] = useState(false);
   const [currentExportSession, setCurrentExportSession] = useState(null);
+  const [formatDialogOpen, setFormatDialogOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState('html');
 
   const fetchChats = async () => {
     setLoading(true);
@@ -122,13 +119,7 @@ const ChatList = () => {
     fetchChats();
     
     // Check if user has previously chosen to not show the export warning
-    const warningPreference = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('dontShowExportWarning='));
-    
-    if (warningPreference) {
-      setDontShowExportWarning(warningPreference.split('=')[1] === 'true');
-    }
+    setDontShowExportWarning(exportPreferences.getDontShowWarning());
   }, []);
 
   // Watch for changes to showDemoChats and refetch when it changes
@@ -210,24 +201,41 @@ const ChatList = () => {
     setSearchQuery(event.target.value);
   };
 
+  // Handle format dialog selection
+  const handleFormatDialogClose = (confirmed) => {
+    setFormatDialogOpen(false);
+    
+    if (confirmed && currentExportSession) {
+      // After format selection, show warning dialog or proceed directly
+      if (dontShowExportWarning) {
+        proceedWithExport(currentExportSession, exportFormat);
+      } else {
+        setExportModalOpen(true);
+      }
+    } else {
+      // Reset current export session if not confirmed
+      setCurrentExportSession(null);
+    }
+  };
+
   // Handle export warning confirmation
   const handleExportWarningClose = (confirmed) => {
     setExportModalOpen(false);
     
     // Save preference in cookies if "Don't show again" is checked
     if (dontShowExportWarning) {
-      const expiryDate = new Date();
-      expiryDate.setFullYear(expiryDate.getFullYear() + 1); // Cookie lasts 1 year
-      document.cookie = `dontShowExportWarning=true; expires=${expiryDate.toUTCString()}; path=/`;
+      exportPreferences.saveDontShowWarning(true);
     }
     
     // If confirmed, proceed with export
     if (confirmed && currentExportSession) {
-      proceedWithExport(currentExportSession);
+      proceedWithExport(currentExportSession, exportFormat);
     }
     
-    // Reset current export session
-    setCurrentExportSession(null);
+    // Reset current export session if not confirmed
+    if (!confirmed) {
+      setCurrentExportSession(null);
+    }
   };
 
   // Function to initiate export process
@@ -236,84 +244,18 @@ const ChatList = () => {
     e.preventDefault();
     e.stopPropagation();
     
-    // Check if warning should be shown
-    if (dontShowExportWarning) {
-      proceedWithExport(sessionId);
-    } else {
-      setCurrentExportSession(sessionId);
-      setExportModalOpen(true);
-    }
+    // Set the current export session
+    setCurrentExportSession(sessionId);
+    
+    // Open format selection dialog first
+    setFormatDialogOpen(true);
   };
 
   // Function to actually perform the export
-  const proceedWithExport = async (sessionId) => {
-    try {
-      console.log("Starting HTML export for session:", sessionId);
-      console.log(`Making API request to: /api/chat/${sessionId}/export`);
-      
-      const response = await axios.get(
-        `/api/chat/${sessionId}/export`,
-        { responseType: 'blob' }
-      );
-
-      const blob = response.data;
-      console.log('Received blob size:', blob ? blob.size : 0);
-
-      if (!blob || blob.size === 0) {
-        throw new Error('Received empty or invalid content from server');
-      }
-
-      // Ensure the blob has the correct MIME type before saving
-      const typedBlob = blob.type ? blob : new Blob([blob], { type: 'text/html;charset=utf-8' });
-      console.log('Prepared typed blob, size:', typedBlob.size);
-
-      // --- Download Logic Start ---
-      const filename = `cursor-chat-${sessionId.slice(0, 8)}.html`;
-      const link = document.createElement('a');
-      
-      // Create an object URL for the (possibly re-typed) blob
-      const url = URL.createObjectURL(typedBlob);
-      link.href = url;
-      link.download = filename;
-      
-      // Append link to the body (required for Firefox)
-      document.body.appendChild(link);
-      
-      // Programmatically click the link to trigger the download
-      link.click();
-      
-      // Clean up: remove the link and revoke the object URL
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      console.log("Download initiated and cleanup complete");
-      // --- Download Logic End ---
-      
-    } catch (error) {
-      // ADDED: More detailed error logging
-      console.error('Detailed export error:', error);
-      if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        console.error('Error Response Data:', error.response.data);
-        console.error('Error Response Status:', error.response.status);
-        console.error('Error Response Headers:', error.response.headers);
-      } else if (error.request) {
-        // The request was made but no response was received
-        // `error.request` is an instance of XMLHttpRequest in the browser
-        console.error('Error Request:', error.request);
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        console.error('Error Message:', error.message);
-      }
-      console.error('Error Config:', error.config);
-      
-      const errorMessage = error.response ? 
-        `Server error: ${error.response.status}` : 
-        error.request ? 
-        'No response received from server' : 
-        error.message || 'Unknown error setting up request';
-      alert(`Failed to export chat: ${errorMessage}`);
-    }
+  const proceedWithExport = async (sessionId, format) => {
+    await exportChat(sessionId, format);
+    // Reset session after export completes
+    setCurrentExportSession(null);
   };
 
   if (loading) {
@@ -373,44 +315,21 @@ const ChatList = () => {
         </Box>
       </Box>
       
-      {/* Export Warning Modal */}
-      <Dialog
+      {/* Use the reusable dialog components */}
+      <FormatSelectionDialog 
+        open={formatDialogOpen}
+        onClose={handleFormatDialogClose}
+        exportFormat={exportFormat}
+        setExportFormat={setExportFormat}
+        colors={colors}
+      />
+      
+      <ExportWarningDialog
         open={exportModalOpen}
-        onClose={() => handleExportWarningClose(false)}
-        aria-labelledby="export-warning-dialog-title"
-      >
-        <DialogTitle id="export-warning-dialog-title" sx={{ display: 'flex', alignItems: 'center' }}>
-          <WarningIcon sx={{ color: 'warning.main', mr: 1 }} />
-          Export Warning
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Please make sure your exported chat doesn't include sensitive data such as API keys and customer information.
-          </DialogContentText>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={dontShowExportWarning}
-                onChange={(e) => setDontShowExportWarning(e.target.checked)}
-              />
-            }
-            label="Don't show this warning again"
-            sx={{ mt: 2 }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => handleExportWarningClose(false)} 
-            color="primary"
-            sx={{ color: 'white' }}
-          >
-            Cancel
-          </Button>
-          <Button onClick={() => handleExportWarningClose(true)} color="highlight" variant="contained">
-            Continue Export
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onClose={handleExportWarningClose}
+        dontShowWarning={dontShowExportWarning}
+        setDontShowWarning={setDontShowExportWarning}
+      />
       
       {/* Search Bar */}
       <TextField
@@ -702,7 +621,7 @@ const ChatList = () => {
                             )}
                           </CardContent>
                           <CardActions sx={{ mt: 'auto', pt: 0 }}>
-                            <Tooltip title="Export as HTML (Warning: Check for sensitive data)">
+                            <Tooltip title="Export chat (HTML/JSON)">
                               <IconButton 
                                 size="small" 
                                 onClick={(e) => handleExport(e, chat.session_id)}

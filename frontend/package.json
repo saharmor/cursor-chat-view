@@ -7,13 +7,20 @@
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.14.3",
     "@mui/material": "^5.14.3",
+    "@svgr/plugin-svgo": "^6.5.1",
+    "@svgr/webpack": "^6.5.1",
     "axios": "^1.4.0",
+    "css-select": "^4.3.0",
+    "nth-check": "^2.1.1",
+    "postcss": "^8.4.31",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^8.0.7",
     "react-router-dom": "^6.14.2",
-    "react-scripts": "5.0.1",
-    "styled-components": "^6.0.7"
+    "react-scripts": "^5.0.1",
+    "resolve-url-loader": "^5.0.0",
+    "styled-components": "^6.0.7",
+    "svgo": "^2.8.0"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -40,4 +47,4 @@
     ]
   },
   "proxy": "http://localhost:5000"
-} 
+}

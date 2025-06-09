@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Simple API server to serve Cursor chat data for the web interface.
+API server to serve Cursor chat data for the web interface.
+Implements repository pattern with caching for improved performance.
 """
 
 import json
@@ -12,11 +13,19 @@ import platform
 import sqlite3
 import argparse
 import pathlib
+import time
+import threading
 from collections import defaultdict
-from typing import Dict, Any, Iterable
+from typing import Dict, Any, Iterable, List, Optional, Union, Tuple
 from pathlib import Path
+from functools import wraps
+
 from flask import Flask, Response, jsonify, send_from_directory, request
 from flask_cors import CORS
+
+# Import our models and repository
+from models import ChatSession, Project, Message, ChatSessionList
+from repository import get_repository, CursorRepository
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
@@ -25,6 +34,18 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__, static_folder='frontend/build')
 CORS(app)
+
+# Performance monitoring decorator
+def timeit(func):
+    """Decorator to measure and log function execution time."""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        elapsed = time.time() - start_time
+        logger.info(f"{func.__name__} executed in {elapsed:.3f}s")
+        return result
+    return wrapper
 
 ################################################################################
 # Cursor storage roots
@@ -791,18 +812,23 @@ def format_chat_for_frontend(chat):
         }
 
 @app.route('/api/chats', methods=['GET'])
+@timeit
 def get_chats():
-    """Get all chat sessions."""
+    """Get all chat sessions with caching."""
     try:
-        logger.info(f"Received request for chats from {request.remote_addr}")
-        chats = extract_chats()
-        logger.info(f"Retrieved {len(chats)} chats")
+        logger.info(f"Received request for all chats from {request.remote_addr}")
+        
+        # Get repository instance
+        repo = get_repository()
+        
+        # Get all chats from the repository (with caching)
+        chat_list = repo.get_all_chats()
         
         # Format each chat for the frontend
         formatted_chats = []
-        for chat in chats:
+        for chat in chat_list.sessions:
             try:
-                formatted_chat = format_chat_for_frontend(chat)
+                formatted_chat = format_chat_for_frontend(chat.to_dict())
                 formatted_chats.append(formatted_chat)
             except Exception as e:
                 logger.error(f"Error formatting individual chat: {e}")
@@ -816,18 +842,21 @@ def get_chats():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/chat/<session_id>', methods=['GET'])
+@timeit
 def get_chat(session_id):
-    """Get a specific chat session by ID."""
+    """Get a specific chat session by ID with caching."""
     try:
         logger.info(f"Received request for chat {session_id} from {request.remote_addr}")
-        chats = extract_chats()
         
-        for chat in chats:
-            # Check for a matching composerId safely
-            if 'session' in chat and chat['session'] and isinstance(chat['session'], dict):
-                if chat['session'].get('composerId') == session_id:
-                    formatted_chat = format_chat_for_frontend(chat)
-                    return jsonify(formatted_chat)
+        # Get repository instance
+        repo = get_repository()
+        
+        # Get specific chat from the repository (with caching)
+        chat = repo.get_chat(session_id)
+        
+        if chat:
+            formatted_chat = format_chat_for_frontend(chat.to_dict())
+            return jsonify(formatted_chat)
         
         logger.warning(f"Chat with ID {session_id} not found")
         return jsonify({"error": "Chat not found"}), 404
@@ -836,41 +865,44 @@ def get_chat(session_id):
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/chat/<session_id>/export', methods=['GET'])
+@timeit
 def export_chat(session_id):
     """Export a specific chat session as standalone HTML or JSON."""
     try:
         logger.info(f"Received request to export chat {session_id} from {request.remote_addr}")
         export_format = request.args.get('format', 'html').lower()
-        chats = extract_chats()
         
-        for chat in chats:
-            # Check for a matching composerId safely
-            if 'session' in chat and chat['session'] and isinstance(chat['session'], dict):
-                if chat['session'].get('composerId') == session_id:
-                    formatted_chat = format_chat_for_frontend(chat)
-                    
-                    if export_format == 'json':
-                        # Export as JSON
-                        return Response(
-                            json.dumps(formatted_chat, indent=2),
-                            mimetype="application/json; charset=utf-8",
-                            headers={
-                                "Content-Disposition": f'attachment; filename="cursor-chat-{session_id[:8]}.json"',
-                                "Cache-Control": "no-store",
-                            },
-                        )
-                    else:
-                        # Default to HTML export
-                        html_content = generate_standalone_html(formatted_chat)
-                        return Response(
-                            html_content,
-                            mimetype="text/html; charset=utf-8",
-                            headers={
-                                "Content-Disposition": f'attachment; filename="cursor-chat-{session_id[:8]}.html"',
-                                "Content-Length": str(len(html_content)),
-                                "Cache-Control": "no-store",
-                            },
-                        )
+        # Get repository instance
+        repo = get_repository()
+        
+        # Get specific chat from the repository (with caching)
+        chat = repo.get_chat(session_id)
+        
+        if chat:
+            formatted_chat = format_chat_for_frontend(chat.to_dict())
+            
+            if export_format == 'json':
+                # Export as JSON
+                return Response(
+                    json.dumps(formatted_chat, indent=2),
+                    mimetype="application/json; charset=utf-8",
+                    headers={
+                        "Content-Disposition": f'attachment; filename="cursor-chat-{session_id[:8]}.json"',
+                        "Cache-Control": "no-store",
+                    },
+                )
+            else:
+                # Default to HTML export
+                html_content = generate_standalone_html(formatted_chat)
+                return Response(
+                    html_content,
+                    mimetype="text/html; charset=utf-8",
+                    headers={
+                        "Content-Disposition": f'attachment; filename="cursor-chat-{session_id[:8]}.html"',
+                        "Content-Length": str(len(html_content)),
+                        "Cache-Control": "no-store",
+                    },
+                )
         
         logger.warning(f"Chat with ID {session_id} not found for export")
         return jsonify({"error": "Chat not found"}), 404
@@ -1017,11 +1049,41 @@ def serve_react(path):
         return send_from_directory(app.static_folder, path)
     return send_from_directory(app.static_folder, 'index.html')
 
+# Add new endpoints for cache management and metrics
+@app.route('/api/cache/stats', methods=['GET'])
+def get_cache_stats():
+    """Get cache statistics."""
+    try:
+        repo = get_repository()
+        stats = repo.get_cache_stats()
+        return jsonify(stats)
+    except Exception as e:
+        logger.error(f"Error getting cache stats: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/cache/invalidate', methods=['POST'])
+def invalidate_cache():
+    """Invalidate the cache."""
+    try:
+        repo = get_repository()
+        repo.invalidate_cache()
+        return jsonify({"status": "Cache invalidated"})
+    except Exception as e:
+        logger.error(f"Error invalidating cache: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run the Cursor Chat View server')
     parser.add_argument('--port', type=int, default=5000, help='Port to run the server on')
     parser.add_argument('--debug', action='store_true', help='Run in debug mode')
+    parser.add_argument('--cache-ttl', type=int, default=300, help='Cache time-to-live in seconds')
+    parser.add_argument('--cache-size', type=int, default=128, help='Maximum number of items in the cache')
     args = parser.parse_args()
     
-    logger.info(f"Starting server on port {args.port}")
-    app.run(host='127.0.0.1', port=args.port, debug=args.debug)
+    # Initialize the repository with the specified cache parameters
+    repo = get_repository(cache_ttl=args.cache_ttl, cache_size=args.cache_size)
+    
+    # Log cache configuration
+    logger.info(f"Cache configured with TTL={args.cache_ttl}s, size={args.cache_size} items")
+    
+    app.run(host='0.0.0.0', port=args.port, debug=args.debug)

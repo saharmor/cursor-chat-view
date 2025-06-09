@@ -6,6 +6,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import ChatList from './components/ChatList';
 import ChatDetail from './components/ChatDetail';
 import Header from './components/Header';
+import { ChatDataProvider } from './hooks/useChatData';
 
 // Define our color palette centrally - using rich, modern colors
 const colors = {
@@ -160,13 +161,15 @@ function App() {
   return (
     <ThemeProvider theme={modernTheme}>
       <CssBaseline />
-      <Router>
-        <Header />
-        <Routes>
-          <Route path="/" element={<ChatList />} />
-          <Route path="/chat/:sessionId" element={<ChatDetail />} />
-        </Routes>
-      </Router>
+      <ChatDataProvider>
+        <Router>
+          <Header />
+          <Routes>
+            <Route path="/" element={<ChatList />} />
+            <Route path="/chat/:sessionId" element={<ChatDetail />} />
+          </Routes>
+        </Router>
+      </ChatDataProvider>
     </ThemeProvider>
   );
 }
